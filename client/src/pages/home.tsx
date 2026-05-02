@@ -15,6 +15,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ToolCard } from "@/components/tool-card";
 import { indianQuotes } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import type { Conversation } from "@shared/schema";
+import { MessageSquare, Plus } from "lucide-react";
 
 const tools = [
   // Core AI Tools
@@ -51,8 +55,14 @@ const tools = [
 
 export default function Home() {
   const [, navigate] = useLocation();
+  const { isAuthenticated } = useAuth();
   const [quote, setQuote] = useState(indianQuotes[0]);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const { data: conversations = [] } = useQuery<Conversation[]>({
+    queryKey: ["/api/conversations"],
+    enabled: isAuthenticated,
+  });
 
   useEffect(() => {
     const randomQuote = indianQuotes[Math.floor(Math.random() * indianQuotes.length)];
@@ -145,7 +155,65 @@ export default function Home() {
             </div>
           </Card>
 
-          <div className="animate-fade-in">
+          {/* Quick Actions & Recent */}
+          <div className="w-full max-w-4xl grid md:grid-cols-2 gap-6 mb-12">
+            <Card className="p-6 glassmorphism border-0">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-saffron-500" /> Quick Actions
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1" onClick={() => navigate("/chat")}>
+                  <MessageSquare className="w-5 h-5 text-blue-500" />
+                  <span className="text-xs">Chat AI</span>
+                </Button>
+                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1" onClick={() => navigate("/tools/document")}>
+                  <FileText className="w-5 h-5 text-saffron-500" />
+                  <span className="text-xs">Read PDF</span>
+                </Button>
+                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1" onClick={() => navigate("/tools/image")}>
+                  <Image className="w-5 h-5 text-india-green-500" />
+                  <span className="text-xs">Vision AI</span>
+                </Button>
+                <Button variant="outline" className="h-16 flex flex-col items-center justify-center gap-1" onClick={() => navigate("/tools/language")}>
+                  <Languages className="w-5 h-5 text-purple-500" />
+                  <span className="text-xs">Translate</span>
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="p-6 glassmorphism border-0 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-india-blue-500" /> Recent Chats
+                </h2>
+                <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs" onClick={() => navigate("/chat")}>
+                  <Plus className="w-3.5 h-3.5" /> New
+                </Button>
+              </div>
+              <div className="space-y-2 flex-1 overflow-y-auto max-h-48 pr-2">
+                {isAuthenticated ? (
+                  conversations.length > 0 ? (
+                    conversations.slice(0, 3).map((conv) => (
+                      <Button key={conv.id} variant="ghost" className="w-full justify-start text-left bg-muted/30 hover:bg-muted" onClick={() => navigate("/chat")}>
+                        <MessageSquare className="w-4 h-4 mr-2 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{conv.title}</span>
+                      </Button>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                      <p className="text-sm">No recent conversations.</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                    <p className="text-sm">Sign in to view history.</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+
+          <div className="text-center mb-12">
             <SwadeshLogoFull />
           </div>
 

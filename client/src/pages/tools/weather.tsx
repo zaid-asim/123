@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { ToolActionFooter } from "@/components/tool-action-footer";
 
 const indianCities = [
     { name: "New Delhi", state: "Delhi", emoji: "🏛️" },
@@ -139,6 +140,7 @@ export default function WeatherTool() {
                         <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                             {result}
                         </div>
+                        <ToolActionFooter content={result} title={`Weather in ${city}`} />
                         <div className="mt-4 p-3 bg-muted/30 rounded-lg flex items-start gap-2">
                             <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                             <p className="text-xs text-muted-foreground">

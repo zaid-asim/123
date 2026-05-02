@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ToolActionFooter } from "@/components/tool-action-footer";
 
 const currencies = [
     { code: "INR", label: "🇮🇳 Indian Rupee (₹)" },
@@ -151,6 +152,7 @@ export default function CurrencyPage() {
                                 <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                                     {result}
                                 </div>
+                                <ToolActionFooter content={result} title={`Currency Conversion`} />
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-center">

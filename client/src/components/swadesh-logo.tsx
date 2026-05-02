@@ -32,42 +32,22 @@ export function SwadeshLogo({ size = "md", animated = true, className }: Swadesh
       >
         <div className="absolute inset-0 rounded-full tricolor-gradient-animated opacity-80" />
         <div className="absolute inset-1 rounded-full bg-background/90 dark:bg-background/80 flex items-center justify-center">
-          <svg
-            viewBox="0 0 100 100"
-            className={cn("w-3/4 h-3/4", animated && "animate-spin-slow")}
-            style={{ animationDuration: "20s" }}
-          >
-            <defs>
-              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(24, 95%, 55%)" />
-                <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-                <stop offset="100%" stopColor="hsl(145, 63%, 45%)" />
-              </linearGradient>
-            </defs>
-            <circle
-              cx="50"
-              cy="50"
-              r="35"
-              fill="none"
-              stroke="url(#logoGradient)"
-              strokeWidth="3"
-              strokeDasharray="10 5"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r="25"
-              fill="none"
-              stroke="url(#logoGradient)"
-              strokeWidth="2"
-            />
-            <circle cx="50" cy="50" r="8" fill="url(#logoGradient)" />
-            <path
-              d="M50 20 L55 35 L70 35 L58 45 L63 60 L50 50 L37 60 L42 45 L30 35 L45 35 Z"
-              fill="url(#logoGradient)"
-              opacity="0.3"
-            />
-          </svg>
+            <svg
+              viewBox="0 0 100 100"
+              className={cn("w-3/4 h-3/4")}
+            >
+              <defs>
+                <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="hsl(24, 95%, 55%)" />
+                  <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+                  <stop offset="100%" stopColor="hsl(145, 63%, 45%)" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M 20 25 h 50 v 15 l -30 25 h 35 v 15 h -60 v -15 l 30 -25 h -25 v -15 z"
+                fill="url(#logoGradient)"
+              />
+            </svg>
         </div>
         {animated && (
           <>
@@ -99,15 +79,13 @@ export function SwadeshLogoFull({ className }: { className?: string }) {
         <div className="absolute inset-2 rounded-full bg-background/95 dark:bg-background/90 flex items-center justify-center">
           <svg
             viewBox="0 0 100 100"
-            className="w-3/4 h-3/4 animate-spin-slow"
-            style={{ animationDuration: "30s" }}
+            className="w-3/4 h-3/4"
           >
             <defs>
               <linearGradient id="logoGradientFull" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="hsl(24, 95%, 55%)" />
-                <stop offset="33%" stopColor="hsl(0, 0%, 100%)" />
-                <stop offset="66%" stopColor="hsl(145, 63%, 45%)" />
-                <stop offset="100%" stopColor="hsl(220, 70%, 55%)" />
+                <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+                <stop offset="100%" stopColor="hsl(145, 63%, 45%)" />
               </linearGradient>
               <filter id="glow">
                 <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
@@ -117,46 +95,11 @@ export function SwadeshLogoFull({ className }: { className?: string }) {
                 </feMerge>
               </filter>
             </defs>
-            <circle
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke="url(#logoGradientFull)"
-              strokeWidth="2"
-              strokeDasharray="15 8"
+            <path
+              d="M 20 25 h 50 v 15 l -30 25 h 35 v 15 h -60 v -15 l 30 -25 h -25 v -15 z"
+              fill="url(#logoGradientFull)"
               filter="url(#glow)"
             />
-            <circle
-              cx="50"
-              cy="50"
-              r="30"
-              fill="none"
-              stroke="url(#logoGradientFull)"
-              strokeWidth="2"
-              filter="url(#glow)"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r="20"
-              fill="none"
-              stroke="url(#logoGradientFull)"
-              strokeWidth="1.5"
-              strokeDasharray="5 5"
-            />
-            <circle cx="50" cy="50" r="10" fill="url(#logoGradientFull)" filter="url(#glow)" />
-            <g>
-              {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-                <circle
-                  key={i}
-                  cx={50 + 35 * Math.cos((angle * Math.PI) / 180)}
-                  cy={50 + 35 * Math.sin((angle * Math.PI) / 180)}
-                  r="3"
-                  fill={i % 3 === 0 ? "hsl(24, 95%, 55%)" : i % 3 === 1 ? "hsl(0, 0%, 100%)" : "hsl(145, 63%, 45%)"}
-                />
-              ))}
-            </g>
           </svg>
         </div>
         <div className="absolute -inset-4 rounded-full border border-saffron/30 animate-ping" style={{ animationDuration: "3s" }} />
@@ -172,6 +115,14 @@ export function SwadeshLogoFull({ className }: { className?: string }) {
         <p className="text-xs text-muted-foreground/70 mt-0.5">
           Created by Zaid Asim
         </p>
+        <a 
+          href="https://www.youtube.com/@Zaid_Asim" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-xs font-semibold text-india-blue-500 hover:text-india-blue-600 mt-2 inline-block transition-colors"
+        >
+          Subscribe on YouTube
+        </a>
       </div>
     </div>
   );

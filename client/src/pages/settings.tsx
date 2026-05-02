@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Moon, Sun, Volume2, Languages, Palette, Shield,
-  User, Brain, ChevronRight, PlayCircle
+  User, Brain, ChevronRight, PlayCircle, Zap, MessageSquare, LayoutTemplate
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SwadeshLogo } from "@/components/swadesh-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -33,6 +32,17 @@ const languages = [
   { value: "ta", label: "Tamil" },
   { value: "te", label: "Telugu" },
   { value: "bn", label: "Bengali" },
+  { value: "mr", label: "Marathi" },
+  { value: "gu", label: "Gujarati" },
+  { value: "kn", label: "Kannada" },
+  { value: "ml", label: "Malayalam" },
+  { value: "pa", label: "Punjabi" },
+  { value: "or", label: "Odia" },
+  { value: "as", label: "Assamese" },
+  { value: "ur", label: "Urdu" },
+  { value: "ne", label: "Nepali" },
+  { value: "sa", label: "Sanskrit" },
+  { value: "kok", label: "Konkani" },
 ];
 
 const wallpapers = [
@@ -80,7 +90,7 @@ export default function Settings() {
       </header>
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-2xl relative z-10">
-        <h1 className="text-3xl font-bold mb-8 text-gradient-tricolor">Settings</h1>
+        <h1 className="text-3xl font-bold mb-8 text-gradient-tricolor">Advanced Control Center</h1>
 
         <div className="space-y-6">
           {/* Account */}
@@ -101,6 +111,73 @@ export default function Settings() {
             </button>
           </Card>
 
+          {/* Swadesh AI Engine */}
+          <Card className="p-6 glassmorphism border-0">
+            <div className="flex items-center gap-3 mb-4">
+              <Zap className="w-5 h-5 text-saffron-500" />
+              <h2 className="text-lg font-semibold">Swadesh AI Engine</h2>
+            </div>
+            <div className="space-y-5">
+              <div>
+                <Label className="mb-2 block">AI Creativity</Label>
+                <Select value={settings.aiCreativity} onValueChange={(v) => updateSettings({ aiCreativity: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="precise">Precise & Factual</SelectItem>
+                    <SelectItem value="balanced">Balanced</SelectItem>
+                    <SelectItem value="creative">Highly Creative</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Controls the randomness and imagination of responses.</p>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Reasoning Depth</Label>
+                <Select value={settings.aiReasoningDepth} onValueChange={(v) => updateSettings({ aiReasoningDepth: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quick">Quick (Brief analysis)</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="deep">Deep (Extensive step-by-step)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Response Length</Label>
+                <Select value={settings.aiResponseLength} onValueChange={(v) => updateSettings({ aiResponseLength: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="concise">Concise</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="detailed">Highly Detailed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+
+          {/* AI Personality */}
+          <Card className="p-6 glassmorphism border-0">
+            <div className="flex items-center gap-3 mb-4">
+              <User className="w-5 h-5 text-saffron-500" />
+              <h2 className="text-lg font-semibold">AI Personality</h2>
+            </div>
+            <div className="space-y-3">
+              {personalities.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => updateSettings({ personality: p.value as any })}
+                  className={cn("w-full p-4 rounded-md text-left transition-all bg-muted/50 hover:bg-muted", settings.personality === p.value && "ring-2 ring-primary bg-primary/10")}
+                  data-testid={`button-personality-${p.value}`}
+                >
+                  <div className="font-medium">{p.label}</div>
+                  <div className="text-sm text-muted-foreground">{p.description}</div>
+                </button>
+              ))}
+            </div>
+          </Card>
+
           {/* Appearance */}
           <Card className="p-6 glassmorphism border-0">
             <div className="flex items-center gap-3 mb-4">
@@ -115,6 +192,7 @@ export default function Settings() {
                 </div>
                 <Switch checked={theme === "dark"} onCheckedChange={c => setTheme(c ? "dark" : "light")} data-testid="switch-dark-mode" />
               </div>
+              
               <div>
                 <Label className="mb-2 block">Wallpaper Theme</Label>
                 <div className="grid grid-cols-5 gap-2">
@@ -132,6 +210,96 @@ export default function Settings() {
             </div>
           </Card>
 
+          {/* UI Controls */}
+          <Card className="p-6 glassmorphism border-0">
+            <div className="flex items-center gap-3 mb-4">
+              <LayoutTemplate className="w-5 h-5 text-pink-500" />
+              <h2 className="text-lg font-semibold">UI Customization</h2>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <Label className="mb-2 block">Font Size</Label>
+                <Select value={settings.fontSize} onValueChange={(v) => updateSettings({ fontSize: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sm">Small</SelectItem>
+                    <SelectItem value="base">Standard</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                    <SelectItem value="xl">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Glass Blur Intensity</Label>
+                <Select value={settings.glassBlur} onValueChange={(v) => updateSettings({ glassBlur: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low Blur</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High Blur</SelectItem>
+                    <SelectItem value="ultra">Ultra Blur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Corner Rounding</Label>
+                <Select value={settings.borderRadius} onValueChange={(v) => updateSettings({ borderRadius: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sharp">Sharp Edges</SelectItem>
+                    <SelectItem value="sm">Slightly Rounded</SelectItem>
+                    <SelectItem value="md">Rounded</SelectItem>
+                    <SelectItem value="lg">Extra Rounded</SelectItem>
+                    <SelectItem value="pill">Pill</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="mb-2 block">Animation Speed</Label>
+                <Select value={settings.animationSpeed} onValueChange={(v) => updateSettings({ animationSpeed: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="slow">Relaxed</SelectItem>
+                    <SelectItem value="normal">Standard</SelectItem>
+                    <SelectItem value="fast">Snappy</SelectItem>
+                    <SelectItem value="off">Off</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </Card>
+
+          {/* Chat & Interaction */}
+          <Card className="p-6 glassmorphism border-0">
+            <div className="flex items-center gap-3 mb-4">
+              <MessageSquare className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-semibold">Chat Behavior</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Press Enter to Send</Label>
+                </div>
+                <Switch checked={settings.enterToSend} onCheckedChange={c => updateSettings({ enterToSend: c })} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto-scroll to bottom</Label>
+                </div>
+                <Switch checked={settings.autoScroll} onCheckedChange={c => updateSettings({ autoScroll: c })} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Show Timestamps</Label>
+                </div>
+                <Switch checked={settings.showTimestamps} onCheckedChange={c => updateSettings({ showTimestamps: c })} />
+              </div>
+            </div>
+          </Card>
+
           {/* Voice & Audio */}
           <Card className="p-6 glassmorphism border-0">
             <div className="flex items-center gap-3 mb-4">
@@ -145,6 +313,14 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Enable voice reading of responses</p>
                 </div>
                 <Switch checked={settings.ttsEnabled} onCheckedChange={c => updateSettings({ ttsEnabled: c })} data-testid="switch-tts" />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Sound Effects</Label>
+                  <p className="text-sm text-muted-foreground">UI interaction sounds</p>
+                </div>
+                <Switch checked={settings.soundEffectsEnabled} onCheckedChange={c => updateSettings({ soundEffectsEnabled: c })} />
               </div>
 
               <div>
@@ -219,27 +395,6 @@ export default function Settings() {
             </div>
           </Card>
 
-          {/* AI Personality */}
-          <Card className="p-6 glassmorphism border-0">
-            <div className="flex items-center gap-3 mb-4">
-              <User className="w-5 h-5 text-saffron-500" />
-              <h2 className="text-lg font-semibold">AI Personality</h2>
-            </div>
-            <div className="space-y-3">
-              {personalities.map(p => (
-                <button
-                  key={p.value}
-                  onClick={() => updateSettings({ personality: p.value as any })}
-                  className={cn("w-full p-4 rounded-md text-left transition-all bg-muted/50 hover:bg-muted", settings.personality === p.value && "ring-2 ring-primary bg-primary/10")}
-                  data-testid={`button-personality-${p.value}`}
-                >
-                  <div className="font-medium">{p.label}</div>
-                  <div className="text-sm text-muted-foreground">{p.description}</div>
-                </button>
-              ))}
-            </div>
-          </Card>
-
           {/* Language */}
           <Card className="p-6 glassmorphism border-0">
             <div className="flex items-center gap-3 mb-4">
@@ -266,6 +421,25 @@ export default function Settings() {
                 <p className="text-sm text-muted-foreground">Formally respond to government officials</p>
               </div>
               <Switch checked={settings.dcModeAuto} onCheckedChange={c => updateSettings({ dcModeAuto: c })} data-testid="switch-dc-mode" />
+            </div>
+          </Card>
+
+          {/* Must Read Memory */}
+          <Card className="p-6 glassmorphism border-0">
+            <div className="flex items-center gap-3 mb-4">
+              <Brain className="w-5 h-5 text-saffron-500" />
+              <h2 className="text-lg font-semibold">Must Read Memory</h2>
+            </div>
+            <div>
+              <Label className="mb-2 block">Core Instructions</Label>
+              <p className="text-sm text-muted-foreground mb-4">This context will be injected into every AI request to vastly improve memory.</p>
+              <textarea 
+                className="w-full p-3 rounded-md bg-background border border-border/50 text-sm"
+                rows={4}
+                value={settings.mustReadMemory || ""}
+                onChange={(e) => updateSettings({ mustReadMemory: e.target.value })}
+                placeholder="E.g., I am learning React. Explain things simply."
+              />
             </div>
           </Card>
 

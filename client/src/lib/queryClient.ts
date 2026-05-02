@@ -1,9 +1,17 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+import { toast } from "@/hooks/use-toast";
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const errorMsg = `${res.status}: ${text}`;
+    toast({
+      title: "API Error",
+      description: text || "An unexpected error occurred.",
+      variant: "destructive",
+    });
+    throw new Error(errorMsg);
   }
 }
 

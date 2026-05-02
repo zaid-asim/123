@@ -1,14 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Send, Volume2, VolumeX, Mic, MicOff, Loader2,
-  Sparkles, User, Trash2, Copy, CheckCheck, RotateCcw
+  Sparkles, User, Trash2, Copy, CheckCheck, Menu, MessageSquare, Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SwadeshLogo } from "@/components/swadesh-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
@@ -16,7 +17,8 @@ import { useTTS } from "@/lib/tts-context";
 import { useSettings } from "@/lib/settings-context";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { ChatMessage } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import type { ChatMessage, Conversation } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
 const CHAT_HISTORY_KEY = "swadesh-chat-history";
@@ -33,8 +35,11 @@ export default function Chat() {
   const searchString = useSearch();
   const initialQuery = new URLSearchParams(searchString).get("q") || "";
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
   const [messages, setMessages] = useState<ChatMessage[]>(loadHistory());
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [input, setInput] = useState(initialQuery);
   const [isListening, setIsListening] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -43,14 +48,62 @@ export default function Chat() {
   const { speak, stop, isSpeaking } = useTTS();
   const { settings } = useSettings();
 
+  const { data: conversations = [] } = useQuery<Conversation[]>({
+    queryKey: ["/api/conversations"],
+    enabled: isAuthenticated,
+  });
+
+  const createConvMutation = useMutation({
+    mutationFn: async (msgs: ChatMessage[]) => {
+      const title = msgs[0]?.content.slice(0, 30) + "..." || "New Conversation";
+      const res = await apiRequest("POST", "/api/conversations", { title, messages: msgs });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setCurrentConversationId(data.id);
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+    }
+  });
+
+  const updateConvMutation = useMutation({
+    mutationFn: async ({ id, msgs }: { id: string, msgs: ChatMessage[] }) => {
+      const res = await apiRequest("PATCH", `/api/conversations/${id}`, { messages: msgs });
+      return res.json();
+    }
+  });
+
+  const deleteConvMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/conversations/${id}`);
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      if (currentConversationId === id) {
+        setMessages([]);
+        setCurrentConversationId(null);
+      }
+      toast({ title: "Conversation deleted" });
+    }
+  });
+
   // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
+    if (settings.autoScroll && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, settings.autoScroll]);
 
   // Persist history
   useEffect(() => {
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100))); // keep last 100
+    if (!isAuthenticated) {
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)));
+    } else if (messages.length > 0) {
+      if (currentConversationId) {
+        updateConvMutation.mutate({ id: currentConversationId, msgs: messages });
+      } else if (!createConvMutation.isPending && !createConvMutation.isSuccess) {
+        createConvMutation.mutate(messages);
+      }
+    }
   }, [messages]);
 
   // Auto-send initial query
@@ -65,7 +118,12 @@ export default function Chat() {
 
   const chatMutation = useMutation({
     mutationFn: async (message: string) => {
-      const res = await apiRequest("POST", "/api/chat", { message, personality: settings.personality });
+      const res = await apiRequest("POST", "/api/chat", { 
+        message, 
+        personality: settings.personality, 
+        mustReadMemory: settings.mustReadMemory,
+        settings
+      });
       return res.json();
     },
     onSuccess: (data) => {
@@ -95,13 +153,24 @@ export default function Chat() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+    if (e.key === "Enter" && !e.shiftKey && settings.enterToSend) { 
+      e.preventDefault(); 
+      handleSend(); 
+    }
   };
 
   const handleClearChat = () => {
     setMessages([]);
-    localStorage.removeItem(CHAT_HISTORY_KEY);
-    toast({ title: "Chat cleared" });
+    setCurrentConversationId(null);
+    if (!isAuthenticated) {
+      localStorage.removeItem(CHAT_HISTORY_KEY);
+    }
+    toast({ title: "Started new conversation" });
+  };
+
+  const loadConversation = (conv: Conversation) => {
+    setMessages(conv.messages as ChatMessage[]);
+    setCurrentConversationId(conv.id);
   };
 
   const handleCopyMessage = (content: string, id: string) => {
@@ -132,7 +201,29 @@ export default function Chat() {
 
   const handleSpeak = (text: string) => { isSpeaking ? stop() : speak(text); };
 
-  const suggestions = ["Explain quantum physics", "Write a Hindi poem", "Debug my code", "Translate to Tamil"];
+  const [suggestions, setSuggestions] = useState([
+    "Explain the concept of Dharma",
+    "Write a Hindi poem about monsoon",
+    "What is the significance of Diwali?",
+    "Translate 'How are you' to Tamil"
+  ]);
+
+  useEffect(() => {
+    if (input.toLowerCase().includes("code") || input.toLowerCase().includes("bug")) {
+      setSuggestions(["Debug my React code", "Explain this Python script", "Write a Java function", "Optimize this algorithm"]);
+    } else if (input.toLowerCase().includes("translate") || input.toLowerCase().includes("hindi") || input.toLowerCase().includes("tamil")) {
+      setSuggestions(["Translate this paragraph to Marathi", "How to say 'Thank you' in Bengali", "Explain Tamil grammar", "Write a letter in Hindi"]);
+    } else if (input.toLowerCase().includes("history") || input.toLowerCase().includes("india")) {
+      setSuggestions(["Tell me about the Maurya Empire", "Who was Chhatrapati Shivaji Maharaj?", "Explain the Independence movement", "History of the Chola Dynasty"]);
+    } else {
+      setSuggestions([
+        "Explain the concept of Dharma",
+        "Write a Hindi poem about monsoon",
+        "What is the significance of Diwali?",
+        "Translate 'How are you' to Tamil"
+      ]);
+    }
+  }, [input]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative">
@@ -141,9 +232,57 @@ export default function Chat() {
       <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+            {isAuthenticated && (
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="shrink-0">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+                  <SheetHeader>
+                    <SheetTitle>Conversations</SheetTitle>
+                  </SheetHeader>
+                  <div className="py-4">
+                    <Button onClick={handleClearChat} className="w-full justify-start gap-2 mb-4 bg-gradient-to-r from-saffron-500 to-india-green-500 text-white">
+                      <Plus className="h-4 w-4" /> New Chat
+                    </Button>
+                    <ScrollArea className="h-[calc(100vh-140px)]">
+                      <div className="space-y-2">
+                        {conversations.map((conv) => (
+                          <div key={conv.id} className="flex group items-center gap-2">
+                            <Button 
+                              variant={currentConversationId === conv.id ? "secondary" : "ghost"} 
+                              className="flex-1 justify-start overflow-hidden" 
+                              onClick={() => loadConversation(conv)}
+                            >
+                              <MessageSquare className="h-4 w-4 mr-2 shrink-0" />
+                              <span className="truncate">{conv.title}</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="opacity-0 group-hover:opacity-100 shrink-0 text-destructive"
+                              onClick={(e) => { e.stopPropagation(); deleteConvMutation.mutate(conv.id); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {conversations.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-8">No past conversations.</p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            )}
+            {!isAuthenticated && (
+              <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
             <SwadeshLogo size="sm" animated={false} />
           </div>
           <div className="flex items-center gap-2">
@@ -193,7 +332,30 @@ export default function Chat() {
                     ? "bg-gradient-to-br from-saffron-500 to-saffron-600 text-white border-0"
                     : "glassmorphism border-0"
                   )}>
-                    <div className="whitespace-pre-wrap text-sm">{message.content}</div>
+                    {(() => {
+                      if (message.content.includes("<think>")) {
+                        const thinkMatch = message.content.match(/<think>([\s\S]*?)<\/think>/);
+                        const thinking = thinkMatch ? thinkMatch[1].trim() : "";
+                        const remaining = message.content.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+                        return (
+                          <div className="flex flex-col gap-2">
+                            {thinking && (
+                              <div className="text-xs bg-black/10 dark:bg-white/5 p-3 rounded-md border border-border/50 text-muted-foreground italic relative mt-2">
+                                <div className="absolute -top-2 left-2 bg-background/80 backdrop-blur-md px-2 text-[10px] uppercase font-bold tracking-widest rounded-full">Reasoning</div>
+                                {thinking}
+                              </div>
+                            )}
+                            <div className="whitespace-pre-wrap text-sm pt-2">{remaining}</div>
+                          </div>
+                        );
+                      }
+                      return <div className="whitespace-pre-wrap text-sm">{message.content}</div>;
+                    })()}
+                    {settings.showTimestamps && (
+                      <div className={cn("text-[10px] mt-1 opacity-50", message.role === "user" ? "text-right" : "text-left")}>
+                        {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                    )}
                     {message.role === "assistant" && (
                       <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleSpeak(message.content)} className="h-7 text-xs gap-1" data-testid={`button-speak-${message.id}`}>

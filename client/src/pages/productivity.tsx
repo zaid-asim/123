@@ -17,6 +17,14 @@ import { cn } from "@/lib/utils";
 
 const TODOS_KEY = "swadesh-todos";
 const NOTES_KEY = "swadesh-notes";
+const REMINDERS_KEY = "swadesh-reminders";
+
+type Reminder = {
+  id: string;
+  title: string;
+  time: string;
+  triggered: boolean;
+};
 
 type Priority = "low" | "medium" | "high";
 
@@ -47,9 +55,56 @@ export default function Productivity() {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteSearch, setNoteSearch] = useState("");
 
+  const [reminders, setReminders] = useState<Reminder[]>(() => loadFromStorage(REMINDERS_KEY, []));
+  const [newReminder, setNewReminder] = useState({ title: "", time: "" });
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
+
   // Persist on change
   useEffect(() => { localStorage.setItem(TODOS_KEY, JSON.stringify(todos)); }, [todos]);
   useEffect(() => { localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }, [notes]);
+  useEffect(() => { localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders)); }, [reminders]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const nowString = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      
+      setReminders(prev => {
+        let changed = false;
+        const next = prev.map(r => {
+          if (!r.triggered && r.time === nowString) {
+            changed = true;
+            if (Notification.permission === "granted") {
+              new Notification("Swadesh AI Reminder", { body: r.title, icon: "/favicon.ico" });
+            }
+            return { ...r, triggered: true };
+          }
+          return r;
+        });
+        return changed ? next : prev;
+      });
+    }, 60000); // Check every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+  };
+
+  const addReminder = () => {
+    if (!newReminder.title.trim() || !newReminder.time) return;
+    const rem: Reminder = {
+      id: Date.now().toString(),
+      title: newReminder.title.trim(),
+      time: newReminder.time,
+      triggered: false
+    };
+    setReminders([...reminders, rem].sort((a, b) => a.time.localeCompare(b.time)));
+    setNewReminder({ title: "", time: "" });
+  };
+
+  const deleteReminder = (id: string) => setReminders(reminders.filter(r => r.id !== id));
 
   const addTodo = () => {
     if (!newTodo.trim()) return;
@@ -278,17 +333,61 @@ export default function Productivity() {
           </TabsContent>
 
           {/* REMINDERS */}
-          <TabsContent value="reminders">
-            <Card className="p-8 glassmorphism border-0 text-center">
-              <Bell className="w-12 h-12 mx-auto mb-4 text-india-blue-500" />
-              <h3 className="text-lg font-semibold mb-2">Voice Reminders</h3>
-              <p className="text-muted-foreground mb-4">
-                Set reminders using voice commands. Say "Remind me to..." followed by your task.
-              </p>
-              <Button onClick={() => navigate("/tools/voice")} className="bg-india-blue-500 hover:bg-india-blue-600" data-testid="button-voice-reminder">
-                <Sparkles className="w-4 h-4 mr-2" /> Open Voice Assistant
+          <TabsContent value="reminders" className="space-y-4">
+            <Card className="p-4 glassmorphism border-0 flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-sm">Browser Notifications</h3>
+                <p className="text-xs text-muted-foreground">Required to receive alerts when app is in background</p>
+              </div>
+              {notificationPermission === "granted" ? (
+                <Badge variant="secondary" className="bg-green-500/10 text-green-500 hover:bg-green-500/20">Enabled</Badge>
+              ) : (
+                <Button size="sm" onClick={requestNotificationPermission} variant="outline" className="text-xs">
+                  Enable Notifications
+                </Button>
+              )}
+            </Card>
+
+            <Card className="p-4 glassmorphism border-0 space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={newReminder.title}
+                  onChange={e => setNewReminder({ ...newReminder, title: e.target.value })}
+                  placeholder="Remind me to..."
+                  className="flex-1"
+                />
+                <Input
+                  type="time"
+                  value={newReminder.time}
+                  onChange={e => setNewReminder({ ...newReminder, time: e.target.value })}
+                  className="w-32"
+                />
+              </div>
+              <Button onClick={addReminder} className="w-full bg-india-blue-500 hover:bg-india-blue-600">
+                <Bell className="w-4 h-4 mr-2" /> Set Reminder
               </Button>
             </Card>
+
+            <div className="space-y-2 mt-4">
+              {reminders.length === 0 ? (
+                <Card className="p-8 glassmorphism border-0 text-center">
+                  <Bell className="w-12 h-12 mx-auto mb-4 text-india-blue-500 opacity-50" />
+                  <p className="text-muted-foreground">No reminders set</p>
+                </Card>
+              ) : (
+                reminders.map(rem => (
+                  <Card key={rem.id} className={cn("p-4 glassmorphism border-0 flex items-center justify-between", rem.triggered && "opacity-60")}>
+                    <div>
+                      <h3 className={cn("font-medium", rem.triggered && "line-through text-muted-foreground")}>{rem.title}</h3>
+                      <p className="text-xs text-muted-foreground">{rem.time}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => deleteReminder(rem.id)} className="text-destructive hover:bg-destructive/10">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </Card>
+                ))
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </main>

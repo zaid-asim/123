@@ -12,6 +12,7 @@ import { ParticleBackground } from "@/components/particle-background";
 import { useTTS } from "@/lib/tts-context";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { ToolActionFooter } from "@/components/tool-action-footer";
 
 const wordOfDay = { word: "Swaraj", meaning: "Self-rule or self-governance; a concept central to Indian independence.", origin: "Sanskrit: swa (self) + raj (rule)", example: "Mahatma Gandhi's vision of Swaraj extended beyond political independence to inner freedom." };
 
@@ -111,6 +112,7 @@ export default function DictionaryPage() {
                                 <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-sm leading-relaxed">
                                     {result.definition}
                                 </div>
+                                <ToolActionFooter content={result.definition} title={`Dictionary Definition: ${result.word}`} />
                             </Card>
                         ) : (
                             <Card className="p-10 glassmorphism border-0 text-center text-muted-foreground">
