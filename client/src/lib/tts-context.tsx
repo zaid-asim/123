@@ -90,10 +90,32 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Default: prefer Indian female, then any Indian, then any female, fallback first
-      const indianFemale = categorized.find(c => c.category === "indian");
-      const female = categorized.find(c => c.category === "female");
-      const defaultVoice = (indianFemale || female || categorized[0])?.voice || null;
+      // Default: Try to find a soft, natural Indian voice first (Microsoft Online/Natural)
+      const preferredVoices = [
+        "microsoft swara online",
+        "microsoft neerja online",
+        "microsoft heera online",
+        "google हिन्दी",
+        "google hindi",
+        "microsoft pallavi online"
+      ];
+      
+      let defaultVoice = null;
+      for (const pref of preferredVoices) {
+        const match = availableVoices.find(v => v.name.toLowerCase().includes(pref));
+        if (match) {
+          defaultVoice = match;
+          break;
+        }
+      }
+
+      if (!defaultVoice) {
+        const indianFemale = categorized.find(c => c.category === "indian" && c.voice.name.toLowerCase().includes("female"));
+        const anyIndian = categorized.find(c => c.category === "indian");
+        const female = categorized.find(c => c.category === "female");
+        defaultVoice = (indianFemale || anyIndian || female || categorized[0])?.voice || null;
+      }
+      
       if (defaultVoice && !selectedVoice) {
         setSelectedVoiceState(defaultVoice);
       }

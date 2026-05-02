@@ -96,11 +96,9 @@ export default function Chat() {
 
   // Persist history — only triggered on message changes
   useEffect(() => {
-    if (!isAuthenticated) {
-      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)));
-    }
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)));
     // DB persistence is handled via onSuccess callbacks of chat mutation
-  }, [messages, isAuthenticated]);
+  }, [messages]);
 
   // Auto-send initial query
   const hasSentInitial = useRef(false);
@@ -289,11 +287,9 @@ export default function Chat() {
                 </SheetContent>
               </Sheet>
             )}
-            {!isAuthenticated && (
-              <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            )}
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <SwadeshLogo size="sm" animated={false} />
           </div>
           <div className="flex items-center gap-2">
