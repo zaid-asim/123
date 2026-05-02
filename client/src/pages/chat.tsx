@@ -48,10 +48,11 @@ export default function Chat() {
   const { speak, stop, isSpeaking } = useTTS();
   const { settings } = useSettings();
 
-  const { data: conversations = [] } = useQuery<Conversation[]>({
+  const { data: conversationsData } = useQuery<Conversation[] | null>({
     queryKey: ["/api/conversations"],
     enabled: isAuthenticated,
   });
+  const conversations = conversationsData ?? [];
 
   const createConvMutation = useMutation({
     mutationFn: async (msgs: ChatMessage[]) => {
@@ -93,18 +94,13 @@ export default function Chat() {
     }
   }, [messages, settings.autoScroll]);
 
-  // Persist history
+  // Persist history — only triggered on message changes
   useEffect(() => {
     if (!isAuthenticated) {
       localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-100)));
-    } else if (messages.length > 0) {
-      if (currentConversationId) {
-        updateConvMutation.mutate({ id: currentConversationId, msgs: messages });
-      } else if (!createConvMutation.isPending && !createConvMutation.isSuccess) {
-        createConvMutation.mutate(messages);
-      }
     }
-  }, [messages]);
+    // DB persistence is handled via onSuccess callbacks of chat mutation
+  }, [messages, isAuthenticated]);
 
   // Auto-send initial query
   const hasSentInitial = useRef(false);
@@ -126,14 +122,29 @@ export default function Chat() {
       });
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (data, message) => {
       const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
         content: data.response,
         timestamp: Date.now(),
       };
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages(prev => {
+        const next = [...prev, assistantMessage];
+        // Persist to DB if authenticated
+        if (isAuthenticated) {
+          if (currentConversationId) {
+            updateConvMutation.mutate({ id: currentConversationId, msgs: next });
+          } else if (!createConvMutation.isPending) {
+            const title = next[0]?.content.slice(0, 40) + "..." || "New Conversation";
+            apiRequest("POST", "/api/conversations", { title, messages: next })
+              .then(r => r.json())
+              .then(conv => setCurrentConversationId(conv.id))
+              .catch(() => {});
+          }
+        }
+        return next;
+      });
     },
     onError: () => toast({ title: "Failed to get response. Please try again.", variant: "destructive" }),
   });

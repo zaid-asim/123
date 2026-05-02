@@ -11,6 +11,22 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import { apiRequest } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { ToolActionFooter } from "@/components/tool-action-footer";
+
+const CREATIVE_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "Hindi (हिन्दी)" },
+  { value: "ta", label: "Tamil (தமிழ்)" },
+  { value: "te", label: "Telugu (తెలుగు)" },
+  { value: "bn", label: "Bengali (বাংলা)" },
+  { value: "mr", label: "Marathi (मराठी)" },
+  { value: "gu", label: "Gujarati (ગુજરાતી)" },
+  { value: "kn", label: "Kannada (ಕನ್ನಡ)" },
+  { value: "ml", label: "Malayalam (മലയാളം)" },
+  { value: "pa", label: "Punjabi (ਪੰਜਾਬੀ)" },
+  { value: "ur", label: "Urdu (اردو)" },
+  { value: "sa", label: "Sanskrit (संस्कृत)" },
+];
 
 const types = [
   { value: "script", label: "Script Generator", icon: FileVideo, description: "Create video/drama scripts" },
@@ -23,7 +39,7 @@ export default function CreativeTools() {
   const [, navigate] = useLocation();
   const [type, setType] = useState("story");
   const [prompt, setPrompt] = useState("");
-  const [language, setLanguage] = useState<"en" | "hi">("en");
+  const [language, setLanguage] = useState("en");
   const [result, setResult] = useState("");
 
   const creativeMutation = useMutation({
@@ -94,13 +110,14 @@ export default function CreativeTools() {
 
               <div>
                 <label className="text-sm font-medium mb-2 block">Language</label>
-                <Select value={language} onValueChange={(v) => setLanguage(v as "en" | "hi")}>
+                <Select value={language} onValueChange={(v) => setLanguage(v)}>
                   <SelectTrigger data-testid="select-language">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="hi">Hindi</SelectItem>
+                    {CREATIVE_LANGUAGES.map(l => (
+                      <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -150,6 +167,7 @@ export default function CreativeTools() {
             {result ? (
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 <div className="whitespace-pre-wrap">{result}</div>
+                <ToolActionFooter content={result} title={`${types.find(t => t.value === type)?.label || 'Creative Content'}`} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-center">

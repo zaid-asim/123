@@ -59,10 +59,11 @@ export default function Home() {
   const [quote, setQuote] = useState(indianQuotes[0]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  const { data: conversations = [] } = useQuery<Conversation[]>({
+  const { data: conversationsData } = useQuery<Conversation[] | null>({
     queryKey: ["/api/conversations"],
     enabled: isAuthenticated,
   });
+  const conversations = conversationsData ?? [];
 
   useEffect(() => {
     const randomQuote = indianQuotes[Math.floor(Math.random() * indianQuotes.length)];
