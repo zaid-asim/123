@@ -38,6 +38,23 @@ export const memories = pgTable("memories", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull().default("New Conversation"),
+  messages: jsonb("messages").notNull().default('[]'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).pick({
+  title: true,
+  messages: true,
+});
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+
 export const insertMemorySchema = createInsertSchema(memories).pick({
   content: true,
   category: true,
@@ -86,9 +103,21 @@ export const settingsSchema = z.object({
   musicVolume: z.number().min(0).max(1).default(0.5),
   musicLoop: z.boolean().default(true),
   musicAutoPlay: z.boolean().default(false),
-  language: z.enum(["en", "hi", "ta", "te", "bn"]).default("en"),
+  language: z.enum(["en", "hi", "ta", "te", "bn", "mr", "gu", "kn", "ml", "pa", "or", "as", "ur", "ne", "sa", "kok"]).default("en"),
   wallpaper: z.enum(["gradient", "peacock", "lotus", "tricolor", "mandala"]).default("gradient"),
   dcModeAuto: z.boolean().default(true),
+  mustReadMemory: z.string().default(""),
+  fontSize: z.enum(["sm", "base", "lg", "xl"]).default("base"),
+  glassBlur: z.enum(["low", "medium", "high", "ultra"]).default("medium"),
+  animationSpeed: z.enum(["slow", "normal", "fast", "off"]).default("normal"),
+  borderRadius: z.enum(["sharp", "sm", "md", "lg", "pill"]).default("lg"),
+  soundEffectsEnabled: z.boolean().default(true),
+  aiCreativity: z.enum(["precise", "balanced", "creative"]).default("balanced"),
+  aiResponseLength: z.enum(["concise", "standard", "detailed"]).default("standard"),
+  aiReasoningDepth: z.enum(["quick", "standard", "deep"]).default("standard"),
+  enterToSend: z.boolean().default(true),
+  autoScroll: z.boolean().default(true),
+  showTimestamps: z.boolean().default(true),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -139,6 +168,45 @@ export const indianQuotes = [
   { quote: "We are what our thoughts have made us; so take care about what you think.", author: "Swami Vivekananda" },
   { quote: "All power is within you; you can do anything and everything.", author: "Swami Vivekananda" },
   { quote: "The only way to do great work is to love what you do.", author: "Sardar Vallabhbhai Patel" },
+  { quote: "Freedom is not worth having if it does not include the freedom to make mistakes.", author: "Mahatma Gandhi" },
+  { quote: "A nation's culture resides in the hearts and in the soul of its people.", author: "Mahatma Gandhi" },
+  { quote: "My life is my message.", author: "Mahatma Gandhi" },
+  { quote: "Earth provides enough to satisfy every man's needs, but not every man's greed.", author: "Mahatma Gandhi" },
+  { quote: "Man is but the product of his thoughts. What he thinks, he becomes.", author: "Mahatma Gandhi" },
+  { quote: "I measure the progress of a community by the degree of progress which women have achieved.", author: "B.R. Ambedkar" },
+  { quote: "Cultivation of mind should be the ultimate aim of human existence.", author: "B.R. Ambedkar" },
+  { quote: "Life should be great rather than long.", author: "B.R. Ambedkar" },
+  { quote: "A great man is different from an eminent one in that he is ready to be the servant of the society.", author: "B.R. Ambedkar" },
+  { quote: "Men are mortal. So are ideas. An idea needs propagation as much as a plant needs watering.", author: "B.R. Ambedkar" },
+  { quote: "In a gentle way, you can shake the world.", author: "Mahatma Gandhi" },
+  { quote: "They may kill me, but they cannot kill my ideas.", author: "Bhagat Singh" },
+  { quote: "Merciless criticism and independent thinking are the two necessary traits of revolutionary thinking.", author: "Bhagat Singh" },
+  { quote: "Every tiny molecule of Ash is in motion with my heat I am such a Lunatic that I am free even in Jail.", author: "Bhagat Singh" },
+  { quote: "I am a man and all that affects mankind concerns me.", author: "Bhagat Singh" },
+  { quote: "Truth alone will endure, all the rest will be swept away before the tide of time.", author: "Mahatma Gandhi" },
+  { quote: "The mind is everything. What you think you become.", author: "Buddha" },
+  { quote: "Peace comes from within. Do not seek it without.", author: "Buddha" },
+  { quote: "Three things cannot be long hidden: the sun, the moon, and the truth.", author: "Buddha" },
+  { quote: "We can never obtain peace in the outer world until we make peace with ourselves.", author: "Dalai Lama" },
+  { quote: "Where the mind is without fear and the head is held high.", author: "Rabindranath Tagore" },
+  { quote: "You can't cross the sea merely by standing and staring at the water.", author: "Rabindranath Tagore" },
+  { quote: "Everything comes to us that belongs to us if we create the capacity to receive it.", author: "Rabindranath Tagore" },
+  { quote: "Let your life lightly dance on the edges of Time like dew on the tip of a leaf.", author: "Rabindranath Tagore" },
+  { quote: "Faith is the bird that feels the light when the dawn is still dark.", author: "Rabindranath Tagore" },
+  { quote: "Knowledge without action is useless and irrelevant.", author: "APJ Abdul Kalam" },
+  { quote: "To succeed in your mission, you must have single-minded devotion to your goal.", author: "APJ Abdul Kalam" },
+  { quote: "Failure will never overtake me if my determination to succeed is strong enough.", author: "APJ Abdul Kalam" },
+  { quote: "Let us sacrifice our today so that our children can have a better tomorrow.", author: "APJ Abdul Kalam" },
+  { quote: "Man needs his difficulties because they are necessary to enjoy success.", author: "APJ Abdul Kalam" },
+  { quote: "Comfort is no test of truth. Truth is often far from being comfortable.", author: "Swami Vivekananda" },
+  { quote: "The greatest religion is to be true to your own nature.", author: "Swami Vivekananda" },
+  { quote: "Take up one idea. Make that one idea your life.", author: "Swami Vivekananda" },
+  { quote: "In a conflict between the heart and the brain, follow your heart.", author: "Swami Vivekananda" },
+  { quote: "Stand up, be bold, be strong. Take the whole responsibility on your own shoulders.", author: "Swami Vivekananda" },
+  { quote: "Even if I die in the service of the nation, I would be proud of it.", author: "Indira Gandhi" },
+  { quote: "There are two kinds of people, those who do the work and those who take the credit. Try to be in the first group; there is less competition there.", author: "Indira Gandhi" },
+  { quote: "There is not a single instance in history where sword has won and sustained an empire.", author: "Sardar Vallabhbhai Patel" },
+  { quote: "Every citizen of India must remember that... he is an Indian and he has every right in this country but with certain... duties.", author: "Sardar Vallabhbhai Patel" },
 ];
 
 export type IndianQuote = typeof indianQuotes[number];
@@ -147,6 +215,8 @@ export const chatRequestSchema = z.object({
   message: z.string().min(1),
   personality: z.enum(["formal", "friendly", "professional", "teacher", "dc-mode"]).optional(),
   context: z.string().optional(),
+  mustReadMemory: z.string().optional(),
+  settings: z.any().optional(),
 });
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;

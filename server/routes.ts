@@ -29,6 +29,7 @@ import {
   imageAnalysisSchema,
   creativeRequestSchema,
   insertMemorySchema,
+  insertConversationSchema,
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -144,6 +145,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const convs = await storage.getConversations(userId);
+      res.json(convs);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  app.post("/api/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertConversationSchema.parse(req.body);
+      const conv = await storage.createConversation(userId, data);
+      res.json(conv);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        res.status(400).json({ error: fromZodError(error).message });
+      } else {
+        console.error("Error creating conversation:", error);
+        res.status(500).json({ error: "Failed to create conversation" });
+      }
+    }
+  });
+
+  app.patch("/api/conversations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      const conv = await storage.updateConversation(id, userId, req.body);
+      if (!conv) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+      res.json(conv);
+    } catch (error) {
+      console.error("Error updating conversation:", error);
+      res.status(500).json({ error: "Failed to update conversation" });
+    }
+  });
+
+  app.delete("/api/conversations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { id } = req.params;
+      await storage.deleteConversation(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({ error: "Failed to delete conversation" });
+    }
+  });
+
   app.post("/api/chat", async (req, res) => {
     try {
       const data = chatRequestSchema.parse(req.body);
@@ -157,12 +212,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      const fullContext = [memoriesContext, data.context].filter(Boolean).join("\n\n");
+      const fullContext = [memoriesContext, data.context, data.mustReadMemory ? `MUST READ MEMORY (STRICTLY ADHERE TO THIS):\n${data.mustReadMemory}` : ""].filter(Boolean).join("\n\n");
       const response = await chat(
         data.message,
         data.personality || "friendly",
         fullContext || undefined,
-        "chat"
+        "chat",
+        data.settings
       );
       res.json({ response });
     } catch (error) {
@@ -188,12 +244,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      const fullContext = [memoriesContext, data.context].filter(Boolean).join("\n\n");
+      const fullContext = [memoriesContext, data.context, data.mustReadMemory ? `MUST READ MEMORY (STRICTLY ADHERE TO THIS):\n${data.mustReadMemory}` : ""].filter(Boolean).join("\n\n");
       const response = await chat(
         data.message,
         data.personality || "friendly",
         fullContext || undefined,
-        "voice"
+        "voice",
+        data.settings
       );
       res.json({ response });
     } catch (error) {

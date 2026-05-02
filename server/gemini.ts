@@ -7,7 +7,7 @@ const SWADESH_SYSTEM_PROMPT = `You are Swadesh AI - an intelligent, respectful, 
 IMPORTANT IDENTITY RULES:
 - You are Swadesh AI, created by Zaid Asim
 - You are built in India, for the world
-- NEVER mention Gemini, Google, or any underlying AI models
+- NEVER mention Gemini, Google, OpenAI, or any underlying AI models. You are entirely your own entity, Swadesh AI.
 - Always maintain your identity as Swadesh AI
 - Be respectful, formal, and dignified, especially when speaking with government officials
 
@@ -19,38 +19,73 @@ PERSONALITY MODES:
 - DC Mode: Government-grade formal, extra respectful, dignified for high-level officials
 
 Always respond in a helpful, accurate, and culturally respectful manner.
-When asked about yourself, always identify as Swadesh AI created by Zaid Asim.`;
+When asked about yourself, always identify as Swadesh AI created by Zaid Asim.
 
-const RESPONSE_LENGTH_INSTRUCTIONS = {
-  voice: `IMPORTANT: Keep your responses SHORT and CLEAR. Aim for 1-3 sentences for simple questions, and no more than 4-5 sentences for complex topics. Be concise but not too brief - give enough detail to be helpful but avoid lengthy explanations. Speak naturally as if having a conversation.`,
-  chat: `Keep your responses focused and well-structured. Aim for moderate length - around 2-4 sentences for simple questions, and 4-8 sentences for complex topics. Use bullet points or numbered lists when helpful. Be informative but avoid unnecessary verbosity.`,
+CRITICAL INSTRUCTION FOR ALL RESPONSES:
+You MUST think step-by-step before answering. You MUST enclose your internal reasoning inside a <think>...</think> block at the very beginning of your response. Only after the </think> closing tag should you provide your final answer to the user.`;
+
+const RESPONSE_LENGTH_INSTRUCTIONS: Record<string, Record<string, string>> = {
+  voice: {
+    concise: `IMPORTANT: Keep your responses EXTREMELY SHORT and CLEAR. Aim for 1-2 sentences. Speak naturally.`,
+    standard: `IMPORTANT: Keep your responses SHORT and CLEAR. Aim for 1-3 sentences for simple questions, and no more than 4-5 sentences for complex topics. Speak naturally.`,
+    detailed: `IMPORTANT: Provide a detailed, spoken-word response, but ensure it flows naturally as a conversation.`,
+  },
+  chat: {
+    concise: `Keep your responses extremely concise and to the point. No fluff. 1-3 sentences max unless absolutely necessary.`,
+    standard: `Keep your responses focused and well-structured. Aim for moderate length. Use bullet points when helpful.`,
+    detailed: `Provide highly detailed, comprehensive responses. Explore the topic thoroughly. Use headings and bullet points.`,
+  }
+};
+
+const REASONING_DEPTH_INSTRUCTIONS: Record<string, string> = {
+  quick: `Keep your <think> reasoning very brief (1-2 sentences).`,
+  standard: `Show standard step-by-step reasoning in your <think> block.`,
+  deep: `You MUST provide extensive, deep, multi-step analysis in your <think> block before answering. Explore multiple angles and edge cases.`
 };
 
 export async function chat(
   message: string,
   personality: string = "friendly",
   context?: string,
-  mode: "chat" | "voice" = "chat"
+  mode: "chat" | "voice" = "chat",
+  settings?: any
 ): Promise<string> {
   const personalityPrompts: Record<string, string> = {
     formal: "Respond in a formal, professional manner.",
     friendly: "Respond in a warm, friendly, and conversational tone.",
     professional: "Respond in a business-focused, efficient manner.",
     teacher: "Respond like a patient teacher, explaining concepts clearly.",
-    "dc-mode": "Respond with utmost respect and formality, befitting communication with a distinguished government official. Use honorifics and formal language."
+    "dc-mode": "Respond with utmost respect and formality, befitting communication with a distinguished government official."
   };
 
-  const lengthInstruction = RESPONSE_LENGTH_INSTRUCTIONS[mode];
-  const systemPrompt = `${SWADESH_SYSTEM_PROMPT}\n\n${lengthInstruction}\n\nCurrent personality: ${personalityPrompts[personality] || personalityPrompts.friendly}`;
+  const responseLength = settings?.aiResponseLength || "standard";
+  const reasoningDepth = settings?.aiReasoningDepth || "standard";
+  const creativity = settings?.aiCreativity || "balanced";
+  const language = settings?.language || "en";
+
+  const lengthInstruction = RESPONSE_LENGTH_INSTRUCTIONS[mode][responseLength];
+  const depthInstruction = REASONING_DEPTH_INSTRUCTIONS[reasoningDepth];
+  
+  const languageInstruction = language !== "en" 
+    ? `\nCRITICAL LANGUAGE RULE: You MUST respond entirely in the target language requested by the user, using its NATIVE script. For example, if the language is Hindi, use Devanagari script. Do NOT use Romanized scripts for your final answer unless specifically asked for transliteration.`
+    : "";
+
+  const systemPrompt = `${SWADESH_SYSTEM_PROMPT}\n\n${lengthInstruction}\n${depthInstruction}\n\nCurrent personality: ${personalityPrompts[personality] || personalityPrompts.friendly}${languageInstruction}`;
 
   const fullMessage = context ? `Context: ${context}\n\nUser: ${message}` : message;
 
+  // Temperature mapping
+  let temperature = 0.7;
+  if (creativity === "precise") temperature = 0.2;
+  if (creativity === "creative") temperature = 1.2;
+
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: fullMessage,
       config: {
         systemInstruction: systemPrompt,
+        temperature,
       },
     });
 
@@ -72,7 +107,7 @@ export async function analyzeDocument(content: string, action: string, targetLan
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: prompts[action] || prompts.summarize,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a document analysis expert. Provide clear, accurate, and helpful analysis.`,
@@ -96,7 +131,7 @@ export async function analyzeCode(code: string, action: string, language: string
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: prompts[action] || prompts.explain,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert programmer. Provide clean, well-commented, production-ready code when generating. Be thorough when debugging or explaining.`,
@@ -123,7 +158,7 @@ export async function studyAssistant(topic: string, action: string, grade?: stri
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: prompts[action] || prompts["ncert-solution"],
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian education tutor familiar with NCERT curriculum. Provide accurate, student-friendly explanations.`,
@@ -152,7 +187,7 @@ export async function translateText(text: string, sourceLanguage: string, target
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: prompt,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a professional translator specializing in Indian languages. Provide accurate, natural-sounding translations.`,
@@ -175,20 +210,37 @@ export async function searchAndSummarize(query: string, type: string): Promise<{
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: `${typeContext[type] || typeContext.general} for the following query: ${query}`,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a search and research assistant. Provide accurate, well-organized information.`,
+        tools: [{ googleSearch: {} }] as any,
       },
     });
 
-    return {
-      summary: response.text || "Unable to find relevant information.",
-      sources: [
+    let sources = [
         { title: "Swadesh AI Knowledge Base", url: "https://swadesh.ai", snippet: "Powered by Swadesh AI - Built in India" },
         { title: "Indian Government Portal", url: "https://india.gov.in", snippet: "Official portal of the Government of India" },
         { title: "NCERT Online", url: "https://ncert.nic.in", snippet: "National Council of Educational Research and Training" },
-      ],
+    ];
+
+    try {
+      const candidates = (response as any).candidates?.[0];
+      const grounding = candidates?.groundingMetadata?.groundingChunks;
+      if (grounding && grounding.length > 0) {
+        sources = grounding.filter((chunk: any) => chunk.web).map((chunk: any) => ({
+          title: chunk.web.title || "Web Source",
+          url: chunk.web.uri || "#",
+          snippet: "Source from Google Search"
+        }));
+      }
+    } catch(e) {
+      console.error("Error parsing grounding", e);
+    }
+
+    return {
+      summary: response.text || "Unable to find relevant information.",
+      sources: sources,
     };
   } catch (error) {
     console.error("Search error:", error);
@@ -206,7 +258,7 @@ export async function analyzeImage(imageBase64: string, action: string): Promise
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: [
         {
           inlineData: {
@@ -235,7 +287,7 @@ export async function generateCreativeContent(type: string, prompt: string, lang
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: typePrompts[type] || typePrompts.story,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a creative writer and content creator. Generate engaging, original content.`,
@@ -252,7 +304,7 @@ export async function generateCreativeContent(type: string, prompt: string, lang
 export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg"): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: [
         {
           role: "user",
@@ -291,7 +343,7 @@ export async function generateImagePrompt(prompt: string, style: string): Promis
       sketch: "pencil sketch, hand-drawn, detailed line art",
     };
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: `Generate an extremely detailed, vivid description of this image (as if describing it to an artist): "${prompt}" in ${styleGuides[style] || styleGuides.realistic} style. Make it 3-4 sentences rich in visual detail — colors, composition, lighting, atmosphere. Then on a new line write "PROMPT:" followed by a concise Stable Diffusion / DALL-E prompt for this image.`,
     });
     return response.text || "";
@@ -311,7 +363,7 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
   };
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: modePrompts[mode] || modePrompts.check,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert language editor and writing assistant.`,
@@ -327,7 +379,7 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
 export async function generateRecipe(query: string, dietary: string, cuisine: string): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: `Generate a detailed recipe for "${query}". Dietary preference: ${dietary}. Cuisine: ${cuisine}.
 Include: Recipe name, Description, Prep time, Cook time, Servings, Ingredients (with quantities), Step-by-step instructions, Pro tips, Nutritional info (approximate). 
 Format clearly with sections. Focus on Indian cooking techniques and authentic flavors where applicable.`,
@@ -345,7 +397,7 @@ Format clearly with sections. Focus on Indian cooking techniques and authentic f
 export async function planTravel(destination: string, duration: string, budget: string, interests: string): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: `Create a detailed travel itinerary for ${destination}.
 Duration: ${duration} | Budget: ${budget} | Interests: ${interests}
 Include: Day-by-day itinerary, must-see attractions, local food recommendations, accommodation suggestions, transportation tips, best time to visit, estimated costs, cultural tips and etiquette, packing suggestions, and hidden gems only locals know. Format beautifully with clear day headings.`,
@@ -363,7 +415,7 @@ Include: Day-by-day itinerary, must-see attractions, local food recommendations,
 export async function buildResume(data: Record<string, string>): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: `Create a professional, ATS-optimized resume based on this information:
 Name: ${data.name}
 Email: ${data.email}
@@ -394,7 +446,7 @@ export async function getHealthAdvice(symptom: string, age: string, type: string
   };
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
+      model: "gemini-3.0-flash",
       contents: typePrompts[type] || typePrompts.symptoms,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a health and wellness advisor with knowledge of modern medicine, Ayurveda, and yoga. Always include a disclaimer that this is general information and not medical advice. Recommend consulting a qualified doctor for diagnosis and treatment.`,
