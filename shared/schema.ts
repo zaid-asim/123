@@ -261,7 +261,7 @@ export const imageAnalysisSchema = z.object({
 export const creativeRequestSchema = z.object({
   type: z.enum(["script", "story", "poem", "video-idea"]),
   prompt: z.string(),
-  language: z.enum(["en", "hi"]).optional(),
+  language: z.enum(["en", "hi", "ta", "te", "bn", "mr", "gu", "kn", "ml", "pa", "or", "as", "ur", "ne", "sa", "kok"]).optional(),
 });
 
 export type DocumentAnalysis = z.infer<typeof documentAnalysisSchema>;

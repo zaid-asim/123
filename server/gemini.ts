@@ -179,6 +179,17 @@ export async function translateText(text: string, sourceLanguage: string, target
     ta: "Tamil",
     te: "Telugu",
     bn: "Bengali",
+    mr: "Marathi",
+    gu: "Gujarati",
+    kn: "Kannada",
+    ml: "Malayalam",
+    pa: "Punjabi",
+    or: "Odia",
+    as: "Assamese",
+    ur: "Urdu",
+    ne: "Nepali",
+    sa: "Sanskrit",
+    kok: "Konkani",
   };
 
   const prompt = transliterate
