@@ -81,15 +81,32 @@ export async function chat(
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: fullMessage,
       config: {
         systemInstruction: systemPrompt,
         temperature,
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+        ] as any,
       },
     });
 
-    return response.text || "I apologize, but I couldn't generate a response. Please try again.";
+    try {
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        if (candidate.finishReason === "SAFETY") {
+          return "I apologize, but my safety filters prevented me from answering that. Please try rephrasing.";
+        }
+      }
+      return response.text || "I apologize, but I couldn't generate a response. Please try again.";
+    } catch (e) {
+      console.error("Failed to parse text from Gemini response:", e, JSON.stringify(response));
+      return "I encountered an error formatting my response. Please try again.";
+    }
   } catch (error) {
     console.error("Chat error:", error);
     throw new Error("Failed to generate response");
@@ -107,14 +124,18 @@ export async function analyzeDocument(content: string, action: string, targetLan
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompts[action] || prompts.summarize,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a document analysis expert. Provide clear, accurate, and helpful analysis.`,
       },
     });
 
-    return response.text || "Unable to analyze the document.";
+    try {
+      return response.text || "Unable to analyze the document.";
+    } catch (e) {
+      return "Unable to analyze the document due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Document analysis error:", error);
     throw new Error("Failed to analyze document");
@@ -131,14 +152,18 @@ export async function analyzeCode(code: string, action: string, language: string
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompts[action] || prompts.explain,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert programmer. Provide clean, well-commented, production-ready code when generating. Be thorough when debugging or explaining.`,
       },
     });
 
-    return response.text || "Unable to process the code.";
+    try {
+      return response.text || "Unable to process the code.";
+    } catch (e) {
+      return "Unable to process the code due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Code analysis error:", error);
     throw new Error("Failed to analyze code");
@@ -158,14 +183,18 @@ export async function studyAssistant(topic: string, action: string, grade?: stri
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompts[action] || prompts["ncert-solution"],
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian education tutor familiar with NCERT curriculum. Provide accurate, student-friendly explanations.`,
       },
     });
 
-    return response.text || "Unable to provide study assistance.";
+    try {
+      return response.text || "Unable to provide study assistance.";
+    } catch (e) {
+      return "Unable to provide study assistance due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Study assistant error:", error);
     throw new Error("Failed to provide study assistance");
@@ -198,14 +227,18 @@ export async function translateText(text: string, sourceLanguage: string, target
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a professional translator specializing in Indian languages. Provide accurate, natural-sounding translations.`,
       },
     });
 
-    return response.text || "Unable to translate.";
+    try {
+      return response.text || "Unable to translate.";
+    } catch (e) {
+      return "Unable to translate due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Translation error:", error);
     throw new Error("Failed to translate");
@@ -221,7 +254,7 @@ export async function searchAndSummarize(query: string, type: string): Promise<{
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: `${typeContext[type] || typeContext.general} for the following query: ${query}`,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a search and research assistant. Provide accurate, well-organized information.`,
@@ -249,9 +282,12 @@ export async function searchAndSummarize(query: string, type: string): Promise<{
       console.error("Error parsing grounding", e);
     }
 
+    let summary = "Unable to find relevant information.";
+    try { summary = response.text || summary; } catch (e) { /* ignore */ }
+
     return {
-      summary: response.text || "Unable to find relevant information.",
-      sources: sources,
+      summary,
+      sources,
     };
   } catch (error) {
     console.error("Search error:", error);
@@ -269,7 +305,7 @@ export async function analyzeImage(imageBase64: string, action: string): Promise
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           inlineData: {
@@ -281,7 +317,11 @@ export async function analyzeImage(imageBase64: string, action: string): Promise
       ],
     });
 
-    return response.text || "Unable to analyze the image.";
+    try {
+      return response.text || "Unable to analyze the image.";
+    } catch (e) {
+      return "Unable to analyze the image due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Image analysis error:", error);
     throw new Error("Failed to analyze image");
@@ -298,14 +338,18 @@ export async function generateCreativeContent(type: string, prompt: string, lang
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: typePrompts[type] || typePrompts.story,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a creative writer and content creator. Generate engaging, original content.`,
       },
     });
 
-    return response.text || "Unable to generate creative content.";
+    try {
+      return response.text || "Unable to generate creative content.";
+    } catch (e) {
+      return "Unable to generate creative content due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("Creative content error:", error);
     throw new Error("Failed to generate creative content");
@@ -315,7 +359,7 @@ export async function generateCreativeContent(type: string, prompt: string, lang
 export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg"): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: [
         {
           role: "user",
@@ -333,7 +377,11 @@ export async function extractTextOCR(imageBase64: string, mimeType: string = "im
         },
       ],
     });
-    return response.text || "No text found in the image.";
+    try {
+      return response.text || "No text found in the image.";
+    } catch (e) {
+      return "Unable to extract text due to an empty response from the AI.";
+    }
   } catch (error) {
     console.error("OCR error:", error);
 
@@ -354,10 +402,10 @@ export async function generateImagePrompt(prompt: string, style: string): Promis
       sketch: "pencil sketch, hand-drawn, detailed line art",
     };
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Generate an extremely detailed, vivid description of this image (as if describing it to an artist): "${prompt}" in ${styleGuides[style] || styleGuides.realistic} style. Make it 3-4 sentences rich in visual detail — colors, composition, lighting, atmosphere. Then on a new line write "PROMPT:" followed by a concise Stable Diffusion / DALL-E prompt for this image.`,
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Image generation error:", error);
     throw error;
@@ -374,13 +422,13 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
   };
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: modePrompts[mode] || modePrompts.check,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert language editor and writing assistant.`,
       },
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Grammar check error:", error);
     throw error;
@@ -390,7 +438,7 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
 export async function generateRecipe(query: string, dietary: string, cuisine: string): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Generate a detailed recipe for "${query}". Dietary preference: ${dietary}. Cuisine: ${cuisine}.
 Include: Recipe name, Description, Prep time, Cook time, Servings, Ingredients (with quantities), Step-by-step instructions, Pro tips, Nutritional info (approximate). 
 Format clearly with sections. Focus on Indian cooking techniques and authentic flavors where applicable.`,
@@ -398,7 +446,7 @@ Format clearly with sections. Focus on Indian cooking techniques and authentic f
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian chef and nutritionist. You know traditional Indian recipes as well as fusion cuisine.`,
       },
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Recipe error:", error);
     throw error;
@@ -408,7 +456,7 @@ Format clearly with sections. Focus on Indian cooking techniques and authentic f
 export async function planTravel(destination: string, duration: string, budget: string, interests: string): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Create a detailed travel itinerary for ${destination}.
 Duration: ${duration} | Budget: ${budget} | Interests: ${interests}
 Include: Day-by-day itinerary, must-see attractions, local food recommendations, accommodation suggestions, transportation tips, best time to visit, estimated costs, cultural tips and etiquette, packing suggestions, and hidden gems only locals know. Format beautifully with clear day headings.`,
@@ -416,7 +464,7 @@ Include: Day-by-day itinerary, must-see attractions, local food recommendations,
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian travel guide with deep knowledge of every state, city, heritage site, and tourist attraction in India and worldwide.`,
       },
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Travel planner error:", error);
     throw error;
@@ -426,7 +474,7 @@ Include: Day-by-day itinerary, must-see attractions, local food recommendations,
 export async function buildResume(data: Record<string, string>): Promise<string> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: `Create a professional, ATS-optimized resume based on this information:
 Name: ${data.name}
 Email: ${data.email}
@@ -441,7 +489,7 @@ Generate a complete, well-formatted resume with professional summary, experience
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert HR consultant and resume writer with 20 years of experience in the Indian and global job market.`,
       },
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Resume builder error:", error);
     throw error;
@@ -457,13 +505,13 @@ export async function getHealthAdvice(symptom: string, age: string, type: string
   };
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
+      model: "gemini-2.5-flash",
       contents: typePrompts[type] || typePrompts.symptoms,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a health and wellness advisor with knowledge of modern medicine, Ayurveda, and yoga. Always include a disclaimer that this is general information and not medical advice. Recommend consulting a qualified doctor for diagnosis and treatment.`,
       },
     });
-    return response.text || "";
+    try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Health advice error:", error);
     throw error;

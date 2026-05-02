@@ -18,11 +18,11 @@ app.use(
 );
 app.use(express.urlencoded({ extended: false }));
 
+import { addLog } from "./logs";
+
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true,
-  });
-  console.log(`${formattedTime} [${source}] ${message}`);
+  // Use unified logging utility
+  addLog(message, source);
 }
 
 app.use((req: Request, res: Response, next: NextFunction) => {
