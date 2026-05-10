@@ -26,6 +26,11 @@ const defaultSettings: Settings = {
   enterToSend: true,
   autoScroll: true,
   showTimestamps: true,
+  useCustomApiKey: false,
+  customApiKey: "",
+  useGroq: false,
+  groqApiKey: "",
+  groqModel: "llama3-8b-8192",
 };
 
 type SettingsContextType = {

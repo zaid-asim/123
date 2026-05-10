@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SwadeshLogo } from "@/components/swadesh-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -153,6 +154,63 @@ export default function Settings() {
                     <SelectItem value="detailed">Highly Detailed</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="pt-4 border-t border-border/50">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <Label>Use Custom API Key (Gemini)</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Override the default environment key.</p>
+                  </div>
+                  <Switch checked={settings.useCustomApiKey} onCheckedChange={c => updateSettings({ useCustomApiKey: c })} />
+                </div>
+                {settings.useCustomApiKey && (
+                  <div className="animate-fade-in space-y-2 mb-4">
+                    <Label>Gemini API Key</Label>
+                    <Input 
+                      type="password" 
+                      placeholder="AIzaSy..." 
+                      value={settings.customApiKey}
+                      onChange={(e) => updateSettings({ customApiKey: e.target.value })}
+                    />
+                    <p className="text-[10px] text-muted-foreground">Your key is stored locally and sent securely.</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between mb-4 mt-6">
+                  <div>
+                    <Label>Use Groq Engine</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Switch from Gemini to Groq for ultra-fast generation.</p>
+                  </div>
+                  <Switch checked={settings.useGroq} onCheckedChange={c => updateSettings({ useGroq: c })} />
+                </div>
+                {settings.useGroq && (
+                  <div className="animate-fade-in space-y-4">
+                    <div>
+                      <Label>Groq API Key</Label>
+                      <Input 
+                        type="password" 
+                        placeholder="gsk_..." 
+                        value={settings.groqApiKey}
+                        onChange={(e) => updateSettings({ groqApiKey: e.target.value })}
+                        className="mt-2"
+                      />
+                    </div>
+                    <div>
+                      <Label>Groq Model</Label>
+                      <Select value={settings.groqModel || "llama3-8b-8192"} onValueChange={(v) => updateSettings({ groqModel: v })}>
+                        <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="llama3-8b-8192">Llama 3 8B</SelectItem>
+                          <SelectItem value="llama3-70b-8192">Llama 3 70B</SelectItem>
+                          <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B</SelectItem>
+                          <SelectItem value="gemma-7b-it">Gemma 7B</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Groq replaces Gemini for text generation when enabled.</p>
+                  </div>
+                )}
               </div>
             </div>
           </Card>

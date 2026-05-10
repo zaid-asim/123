@@ -5,7 +5,8 @@ import {
   Image, Video, Newspaper, ListTodo, Sparkles, Settings,
   Music, Volume2, Clock, MapPin, User, Brain, CloudSun,
   Calculator, BookOpen, DollarSign, HelpCircle,
-  ScanText, Wand2, PenLine, UtensilsCrossed, Plane, FileUser, Heart
+  ScanText, Wand2, PenLine, UtensilsCrossed, Plane, FileUser, Heart,
+  Landmark, Star, Leaf, TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,14 +38,18 @@ const tools = [
   { id: "grammar", title: "Grammar & Writing AI", description: "Grammar check, improve, formal/casual writing", icon: PenLine, gradient: "green" as const, path: "/tools/grammar" },
   { id: "creative-tools", title: "Creative Tools", description: "Script, story, poem & essay generator", icon: Sparkles, gradient: "purple" as const, path: "/tools/creative" },
   // Knowledge & Learning
+  { id: "culture", title: "Cultural Explorer", description: "Deep dive into India's rich heritage, history, and arts", icon: Landmark, gradient: "saffron" as const, path: "/tools/culture" },
+  { id: "astrology", title: "Vedic Astrologer", description: "Panchang, Muhurat & Cosmic Insights", icon: Star, gradient: "purple" as const, path: "/tools/astrology" },
   { id: "dictionary", title: "AI Dictionary", description: "Word definitions, etymology, Hindi translation", icon: BookOpen, gradient: "saffron" as const, path: "/tools/dictionary" },
   { id: "quiz", title: "Quiz Master", description: "AI-generated quizzes on Indian history, science & more", icon: HelpCircle, gradient: "blue" as const, path: "/tools/quiz" },
   // Lifestyle
   { id: "recipe", title: "AI Recipe Chef", description: "Detailed Indian recipes with ingredients & nutrition", icon: UtensilsCrossed, gradient: "green" as const, path: "/tools/recipe" },
-  { id: "health", title: "Health & Wellness AI", description: "Ayurveda, yoga, diet plans & symptom guidance", icon: Heart, gradient: "purple" as const, path: "/tools/health" },
+  { id: "ayurveda", title: "Yoga & Ayurveda", description: "Holistic health, Dosha analysis, and ancient wisdom", icon: Leaf, gradient: "green" as const, path: "/tools/ayurveda" },
+  { id: "health", title: "Health & Wellness AI", description: "Symptom checker & medical guidance", icon: Heart, gradient: "purple" as const, path: "/tools/health" },
   { id: "travel", title: "AI Travel Planner", description: "Complete itineraries for India & worldwide", icon: Plane, gradient: "saffron" as const, path: "/tools/travel" },
   { id: "weather", title: "Weather AI", description: "AI-powered climate insights for Indian cities", icon: CloudSun, gradient: "blue" as const, path: "/tools/weather" },
   // Utilities
+  { id: "finance", title: "Desi Finance", description: "Mutual funds, GST, and Indian startup guidance", icon: TrendingUp, gradient: "blue" as const, path: "/tools/finance" },
   { id: "calculator", title: "AI Calculator", description: "Smart calculator with AI step-by-step explanations", icon: Calculator, gradient: "green" as const, path: "/tools/calculator" },
   { id: "currency", title: "Currency Converter", description: "Convert 12 currencies with AI exchange rates", icon: DollarSign, gradient: "purple" as const, path: "/tools/currency" },
   { id: "resume", title: "Resume Builder", description: "ATS-optimized resume generated with AI in seconds", icon: FileUser, gradient: "saffron" as const, path: "/tools/resume" },

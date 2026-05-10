@@ -340,17 +340,24 @@ export default function Chat() {
                     : "glassmorphism border-0"
                   )}>
                     {(() => {
-                      if (message.content.includes("<think>")) {
-                        const thinkMatch = message.content.match(/<think>([\s\S]*?)<\/think>/);
+                      if (message.content.match(/<think>[\s\S]*?(?:<\/think>|$)/i)) {
+                        const thinkMatch = message.content.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
                         const thinking = thinkMatch ? thinkMatch[1].trim() : "";
-                        const remaining = message.content.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+                        const remaining = message.content.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim();
                         return (
                           <div className="flex flex-col gap-2">
                             {thinking && (
-                              <div className="text-xs bg-black/10 dark:bg-white/5 p-3 rounded-md border border-border/50 text-muted-foreground italic relative mt-2">
-                                <div className="absolute -top-2 left-2 bg-background/80 backdrop-blur-md px-2 text-[10px] uppercase font-bold tracking-widest rounded-full">Reasoning</div>
-                                {thinking}
-                              </div>
+                              <details className="text-xs bg-black/5 dark:bg-white/5 p-3 rounded-md border border-border/50 text-muted-foreground relative mt-2 group">
+                                <summary className="cursor-pointer text-[10px] uppercase font-bold tracking-widest flex items-center gap-2 select-none hover:text-foreground transition-colors outline-none list-none">
+                                  <span className="flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3" />
+                                    Show Thinking Process
+                                  </span>
+                                </summary>
+                                <div className="mt-3 pt-3 border-t border-border/20 whitespace-pre-wrap text-[11px] italic">
+                                  {thinking}
+                                </div>
+                              </details>
                             )}
                             <div className="whitespace-pre-wrap text-sm pt-2">{remaining}</div>
                           </div>

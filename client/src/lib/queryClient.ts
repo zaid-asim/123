@@ -15,14 +15,55 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function getCustomApiKeyHeader() {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("swadesh-ai-settings");
+    if (stored) {
+      const settings = JSON.parse(stored);
+      if (settings.useCustomApiKey && settings.customApiKey) {
+        return settings.customApiKey;
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+function getGroqHeaders() {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem("swadesh-ai-settings");
+    if (stored) {
+      const settings = JSON.parse(stored);
+      if (settings.useGroq && settings.groqApiKey) {
+        return {
+          "x-use-groq": "true",
+          "x-groq-api-key": settings.groqApiKey,
+          "x-groq-model": settings.groqModel || "llama3-8b-8192",
+        };
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
+  const customKey = getCustomApiKeyHeader();
+  if (customKey) headers["x-gemini-api-key"] = customKey;
+  
+  const groqHeaders = getGroqHeaders();
+  if (groqHeaders) {
+    Object.assign(headers, groqHeaders);
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -37,7 +78,17 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    const headers: Record<string, string> = {};
+    const customKey = getCustomApiKeyHeader();
+    if (customKey) headers["x-gemini-api-key"] = customKey;
+    
+    const groqHeaders = getGroqHeaders();
+    if (groqHeaders) {
+      Object.assign(headers, groqHeaders);
+    }
+
     const res = await fetch(queryKey.join("/") as string, {
+      headers,
       credentials: "include",
     });
 

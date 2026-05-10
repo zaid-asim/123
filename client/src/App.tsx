@@ -9,6 +9,7 @@ import { MusicProvider } from "@/lib/music-context";
 import { TTSProvider } from "@/lib/tts-context";
 import { useAuth, GuestProvider } from "@/hooks/useAuth";
 import { GuestBanner } from "@/components/guest-banner";
+import { WelcomeScreen } from "@/components/welcome-screen";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Chat from "@/pages/chat";
@@ -37,6 +38,10 @@ import RecipePage from "@/pages/tools/recipe";
 import TravelPage from "@/pages/tools/travel";
 import ResumePage from "@/pages/tools/resume";
 import HealthPage from "@/pages/tools/health";
+import CultureTools from "@/pages/tools/culture";
+import AstrologyTools from "@/pages/tools/astrology";
+import AyurvedaTools from "@/pages/tools/ayurveda";
+import FinanceTools from "@/pages/tools/finance";
 import Landing from "@/pages/landing";
 import Setup from "@/pages/setup";
 import MemoryPage from "@/pages/memory";
@@ -115,6 +120,10 @@ function Router() {
         <Route path="/tools/travel" component={TravelPage} />
         <Route path="/tools/resume" component={ResumePage} />
         <Route path="/tools/health" component={HealthPage} />
+        <Route path="/tools/culture" component={CultureTools} />
+        <Route path="/tools/astrology" component={AstrologyTools} />
+        <Route path="/tools/ayurveda" component={AyurvedaTools} />
+        <Route path="/tools/finance" component={FinanceTools} />
         <Route component={NotFound} />
       </Switch>
       {/* Show guest banner on every page if in guest mode */}
@@ -132,6 +141,7 @@ function App() {
             <MusicProvider>
               <TTSProvider>
                 <TooltipProvider>
+                  <WelcomeScreen />
                   <Toaster />
                   <Router />
                 </TooltipProvider>

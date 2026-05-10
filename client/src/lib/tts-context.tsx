@@ -72,7 +72,21 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const loadVoices = () => {
-      const availableVoices = speechSynthesis.getVoices();
+      let availableVoices = speechSynthesis.getVoices();
+      
+      // Filter for only high-quality/premium voices
+      const premiumVoices = availableVoices.filter(v => {
+        const name = v.name.toLowerCase();
+        return name.includes("online") || name.includes("natural") || 
+               name.includes("google") || name.includes("siri") || 
+               name.includes("premium") || name.includes("apple");
+      });
+      
+      // If premium voices exist, use them. Otherwise fallback to all available.
+      if (premiumVoices.length > 0) {
+        availableVoices = premiumVoices;
+      }
+      
       setVoices(availableVoices);
       const categorized = availableVoices.map(v => ({ voice: v, category: categorizeVoice(v) }));
       // Sort: Indian first, then female, male, other
@@ -141,7 +155,9 @@ export function TTSProvider({ children }: { children: React.ReactNode }) {
     if (!settings.ttsEnabled) return;
     speechSynthesis.cancel();
 
-    const cleanText = text.replace(/[*#_`]/g, "").replace(/\n+/g, ". ");
+    // Strip <think> blocks before speaking
+    const textWithoutThink = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+    const cleanText = textWithoutThink.replace(/[*#_`]/g, "").replace(/\n+/g, ". ");
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = settings.ttsSpeed;
     utterance.pitch = voicePitch;
