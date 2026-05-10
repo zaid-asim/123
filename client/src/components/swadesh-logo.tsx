@@ -38,9 +38,9 @@ export function SwadeshLogo({ size = "md", animated = true, className }: Swadesh
             >
               <defs>
                 <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="hsl(24, 95%, 55%)" />
-                  <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-                  <stop offset="100%" stopColor="hsl(145, 63%, 45%)" />
+                  <stop offset="0%" stopColor="#FF9933" />
+                  <stop offset="50%" stopColor="#FFFFFF" />
+                  <stop offset="100%" stopColor="#138808" />
                 </linearGradient>
               </defs>
               <path
@@ -83,9 +83,9 @@ export function SwadeshLogoFull({ className }: { className?: string }) {
           >
             <defs>
               <linearGradient id="logoGradientFull" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(24, 95%, 55%)" />
-                <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-                <stop offset="100%" stopColor="hsl(145, 63%, 45%)" />
+                <stop offset="0%" stopColor="#FF9933" />
+                <stop offset="50%" stopColor="#FFFFFF" />
+                <stop offset="100%" stopColor="#138808" />
               </linearGradient>
               <filter id="glow">
                 <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
