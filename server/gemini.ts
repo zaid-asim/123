@@ -2,6 +2,49 @@ import { GoogleGenAI } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+function getClient(apiKey?: string) {
+  return apiKey ? new GoogleGenAI({ apiKey }) : ai;
+}
+
+export type GroqConfig = {
+  useGroq: boolean;
+  groqApiKey?: string;
+  groqModel?: string;
+};
+
+async function generateWithGroq(contents: string, systemInstruction: string, config: GroqConfig, temperature: number) {
+  const url = "https://api.groq.com/openai/v1/chat/completions";
+  const model = config.groqModel || "llama3-8b-8192";
+  const apiKey = config.groqApiKey;
+
+  if (!apiKey) throw new Error("Groq API key is missing");
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      temperature,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: contents }
+      ]
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Groq API error:", errorText);
+    throw new Error(`Groq API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 const SWADESH_SYSTEM_PROMPT = `You are Swadesh AI - an intelligent, respectful, and culturally-aware Indian AI assistant.
 
 IMPORTANT IDENTITY RULES:
@@ -48,7 +91,9 @@ export async function chat(
   personality: string = "friendly",
   context?: string,
   mode: "chat" | "voice" = "chat",
-  settings?: any
+  settings?: any,
+  apiKey?: string,
+  groqConfig?: GroqConfig
 ): Promise<string> {
   const personalityPrompts: Record<string, string> = {
     formal: "Respond in a formal, professional manner.",
@@ -80,40 +125,43 @@ export async function chat(
   if (creativity === "creative") temperature = 1.2;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: fullMessage,
-      config: {
-        systemInstruction: systemPrompt,
-        temperature,
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-        ] as any,
-      },
-    });
+    let responseText = "";
 
-    try {
+    if (groqConfig?.useGroq) {
+      responseText = await generateWithGroq(fullMessage, systemPrompt, groqConfig, temperature);
+    } else {
+      const response = await getClient(apiKey).models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: fullMessage,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature,
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+          ] as any,
+        },
+      });
+
       if (response.candidates && response.candidates.length > 0) {
         const candidate = response.candidates[0];
         if (candidate.finishReason === "SAFETY") {
           return "I apologize, but my safety filters prevented me from answering that. Please try rephrasing.";
         }
       }
-      return response.text || "I apologize, but I couldn't generate a response. Please try again.";
-    } catch (e) {
-      console.error("Failed to parse text from Gemini response:", e, JSON.stringify(response));
-      return "I encountered an error formatting my response. Please try again.";
+      responseText = response.text || "I apologize, but I couldn't generate a response. Please try again.";
     }
+
+    return responseText;
   } catch (error) {
     console.error("Chat error:", error);
     throw new Error("Failed to generate response");
   }
 }
 
-export async function analyzeDocument(content: string, action: string, targetLanguage?: string): Promise<string> {
+export async function analyzeDocument(content: string, action: string, targetLanguage?: string, apiKey?: string): Promise<string> {
   const prompts: Record<string, string> = {
     summarize: `Summarize the following document concisely, highlighting key points:\n\n${content}`,
     explain: `Provide a detailed explanation of the following document, breaking down complex concepts:\n\n${content}`,
@@ -123,7 +171,7 @@ export async function analyzeDocument(content: string, action: string, targetLan
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompts[action] || prompts.summarize,
       config: {
@@ -142,7 +190,7 @@ export async function analyzeDocument(content: string, action: string, targetLan
   }
 }
 
-export async function analyzeCode(code: string, action: string, language: string, prompt?: string): Promise<string> {
+export async function analyzeCode(code: string, action: string, language: string, prompt?: string, apiKey?: string): Promise<string> {
   const prompts: Record<string, string> = {
     generate: `Generate ${language} code for the following requirement:\n\n${prompt}`,
     debug: `Debug the following ${language} code and explain the issues found:\n\n${code}`,
@@ -151,7 +199,7 @@ export async function analyzeCode(code: string, action: string, language: string
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompts[action] || prompts.explain,
       config: {
@@ -170,7 +218,7 @@ export async function analyzeCode(code: string, action: string, language: string
   }
 }
 
-export async function studyAssistant(topic: string, action: string, grade?: string, subject?: string): Promise<string> {
+export async function studyAssistant(topic: string, action: string, grade?: string, subject?: string, apiKey?: string): Promise<string> {
   const context = grade && subject ? `For Class ${grade} ${subject}: ` : "";
 
   const prompts: Record<string, string> = {
@@ -182,7 +230,7 @@ export async function studyAssistant(topic: string, action: string, grade?: stri
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompts[action] || prompts["ncert-solution"],
       config: {
@@ -201,7 +249,7 @@ export async function studyAssistant(topic: string, action: string, grade?: stri
   }
 }
 
-export async function translateText(text: string, sourceLanguage: string, targetLanguage: string, transliterate: boolean): Promise<string> {
+export async function translateText(text: string, sourceLanguage: string, targetLanguage: string, transliterate: boolean, apiKey?: string): Promise<string> {
   const languageNames: Record<string, string> = {
     en: "English",
     hi: "Hindi",
@@ -226,7 +274,7 @@ export async function translateText(text: string, sourceLanguage: string, target
     : `Translate the following ${languageNames[sourceLanguage]} text to ${languageNames[targetLanguage]}:\n\n${text}`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
@@ -245,7 +293,7 @@ export async function translateText(text: string, sourceLanguage: string, target
   }
 }
 
-export async function searchAndSummarize(query: string, type: string): Promise<{ summary: string; sources: Array<{ title: string; url: string; snippet: string }> }> {
+export async function searchAndSummarize(query: string, type: string, apiKey?: string): Promise<{ summary: string; sources: Array<{ title: string; url: string; snippet: string }> }> {
   const typeContext: Record<string, string> = {
     general: "Provide a comprehensive answer",
     news: "Focus on recent news and current events",
@@ -253,7 +301,7 @@ export async function searchAndSummarize(query: string, type: string): Promise<{
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: `${typeContext[type] || typeContext.general} for the following query: ${query}`,
       config: {
@@ -295,7 +343,7 @@ export async function searchAndSummarize(query: string, type: string): Promise<{
   }
 }
 
-export async function analyzeImage(imageBase64: string, action: string): Promise<string> {
+export async function analyzeImage(imageBase64: string, action: string, apiKey?: string): Promise<string> {
   const prompts: Record<string, string> = {
     ocr: "Extract all text from this image. Provide the text exactly as it appears.",
     "detect-objects": "Identify and list all objects visible in this image with their approximate locations.",
@@ -304,7 +352,7 @@ export async function analyzeImage(imageBase64: string, action: string): Promise
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
         {
@@ -328,7 +376,7 @@ export async function analyzeImage(imageBase64: string, action: string): Promise
   }
 }
 
-export async function generateCreativeContent(type: string, prompt: string, language: string = "en"): Promise<string> {
+export async function generateCreativeContent(type: string, prompt: string, language: string = "en", apiKey?: string): Promise<string> {
   const typePrompts: Record<string, string> = {
     script: `Write a detailed video/drama script for: ${prompt}. Include scene descriptions, dialogues, and directions.`,
     story: `Write a creative short story based on: ${prompt}. Include interesting characters, plot twists, and a satisfying ending.`,
@@ -337,7 +385,7 @@ export async function generateCreativeContent(type: string, prompt: string, lang
   };
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: typePrompts[type] || typePrompts.story,
       config: {
@@ -356,9 +404,9 @@ export async function generateCreativeContent(type: string, prompt: string, lang
   }
 }
 
-export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg"): Promise<string> {
+export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg", apiKey?: string): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
         {
@@ -389,7 +437,7 @@ export async function extractTextOCR(imageBase64: string, mimeType: string = "im
   }
 }
 
-export async function generateImagePrompt(prompt: string, style: string): Promise<string> {
+export async function generateImagePrompt(prompt: string, style: string, apiKey?: string): Promise<string> {
   // Since direct image generation via Gemini API may not be available in all regions,
   // we generate a detailed image description + SVG/ASCII art as a creative fallback
   try {
@@ -401,7 +449,7 @@ export async function generateImagePrompt(prompt: string, style: string): Promis
       "3d": "3D render, CGI, modern, high-tech look",
       sketch: "pencil sketch, hand-drawn, detailed line art",
     };
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Generate an extremely detailed, vivid description of this image (as if describing it to an artist): "${prompt}" in ${styleGuides[style] || styleGuides.realistic} style. Make it 3-4 sentences rich in visual detail — colors, composition, lighting, atmosphere. Then on a new line write "PROMPT:" followed by a concise Stable Diffusion / DALL-E prompt for this image.`,
     });
@@ -412,7 +460,7 @@ export async function generateImagePrompt(prompt: string, style: string): Promis
   }
 }
 
-export async function checkGrammar(text: string, mode: string): Promise<string> {
+export async function checkGrammar(text: string, mode: string, apiKey?: string): Promise<string> {
   const modePrompts: Record<string, string> = {
     check: `Check the following text for grammar, spelling, punctuation, and style errors. List each error with the correction and explanation:\n\n${text}`,
     improve: `Rewrite the following text to be more professional, clear, and well-written while preserving the original meaning. Show the improved version:\n\n${text}`,
@@ -421,7 +469,7 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
     hindi: `Check grammar and improve the following Hindi text. Provide corrections:\n\n${text}`,
   };
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: modePrompts[mode] || modePrompts.check,
       config: {
@@ -435,9 +483,9 @@ export async function checkGrammar(text: string, mode: string): Promise<string> 
   }
 }
 
-export async function generateRecipe(query: string, dietary: string, cuisine: string): Promise<string> {
+export async function generateRecipe(query: string, dietary: string, cuisine: string, apiKey?: string): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Generate a detailed recipe for "${query}". Dietary preference: ${dietary}. Cuisine: ${cuisine}.
 Include: Recipe name, Description, Prep time, Cook time, Servings, Ingredients (with quantities), Step-by-step instructions, Pro tips, Nutritional info (approximate). 
@@ -453,9 +501,9 @@ Format clearly with sections. Focus on Indian cooking techniques and authentic f
   }
 }
 
-export async function planTravel(destination: string, duration: string, budget: string, interests: string): Promise<string> {
+export async function planTravel(destination: string, duration: string, budget: string, interests: string, apiKey?: string): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Create a detailed travel itinerary for ${destination}.
 Duration: ${duration} | Budget: ${budget} | Interests: ${interests}
@@ -471,9 +519,9 @@ Include: Day-by-day itinerary, must-see attractions, local food recommendations,
   }
 }
 
-export async function buildResume(data: Record<string, string>): Promise<string> {
+export async function buildResume(data: Record<string, string>, apiKey?: string): Promise<string> {
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Create a professional, ATS-optimized resume based on this information:
 Name: ${data.name}
@@ -496,7 +544,7 @@ Generate a complete, well-formatted resume with professional summary, experience
   }
 }
 
-export async function getHealthAdvice(symptom: string, age: string, type: string): Promise<string> {
+export async function getHealthAdvice(symptom: string, age: string, type: string, apiKey?: string): Promise<string> {
   const typePrompts: Record<string, string> = {
     symptoms: `I have these symptoms: ${symptom}. Age: ${age}. Provide: possible causes, home remedies, when to see a doctor, and general advice. Always recommend consulting a doctor for serious symptoms.`,
     yoga: `Recommend yoga poses and breathing exercises for: ${symptom}. Include: pose name, how to do it, duration, benefits. Age: ${age}.`,
@@ -504,7 +552,7 @@ export async function getHealthAdvice(symptom: string, age: string, type: string
     diet: `Create a healthy Indian diet plan for: ${symptom || "general wellness"}. Age: ${age}. Include breakfast, lunch, dinner, snacks with Indian foods.`,
   };
   try {
-    const response = await ai.models.generateContent({
+    const response = await getClient(apiKey).models.generateContent({
       model: "gemini-2.5-flash",
       contents: typePrompts[type] || typePrompts.symptoms,
       config: {
@@ -514,6 +562,70 @@ export async function getHealthAdvice(symptom: string, age: string, type: string
     try { return response.text || ""; } catch (e) { return ""; }
   } catch (error) {
     console.error("Health advice error:", error);
+    throw error;
+  }
+}
+
+export async function exploreCulture(topic: string, apiKey?: string): Promise<string> {
+  try {
+    const response = await getClient(apiKey).models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Provide a detailed, immersive exploration of this aspect of Indian culture, history, or heritage: "${topic}". Include historical context, cultural significance, and interesting facts.`,
+      config: {
+        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert historian and cultural guide specializing in India's rich heritage.`,
+      },
+    });
+    try { return response.text || ""; } catch (e) { return ""; }
+  } catch (error) {
+    console.error("Culture error:", error);
+    throw error;
+  }
+}
+
+export async function getAstrologyInsights(details: string, apiKey?: string): Promise<string> {
+  try {
+    const response = await getClient(apiKey).models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Provide a basic Vedic astrology/Panchang insight based on these details: "${details}". Keep it respectful, educational, and include a disclaimer that this is for entertainment and traditional knowledge only.`,
+      config: {
+        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert in Vedic Astrology (Jyotish) and Panchang calculations.`,
+      },
+    });
+    try { return response.text || ""; } catch (e) { return ""; }
+  } catch (error) {
+    console.error("Astrology error:", error);
+    throw error;
+  }
+}
+
+export async function getAyurvedaAdvice(symptoms: string, apiKey?: string): Promise<string> {
+  try {
+    const response = await getClient(apiKey).models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Provide holistic Ayurveda, Yoga, and natural remedy advice for: "${symptoms}". Include Dosha balancing tips and specific yoga asanas. Add a strict medical disclaimer.`,
+      config: {
+        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Ayurvedic practitioner and Yoga guru. Provide structured, holistic wellness advice.`,
+      },
+    });
+    try { return response.text || ""; } catch (e) { return ""; }
+  } catch (error) {
+    console.error("Ayurveda error:", error);
+    throw error;
+  }
+}
+
+export async function getFinanceAdvice(query: string, apiKey?: string): Promise<string> {
+  try {
+    const response = await getClient(apiKey).models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Provide detailed financial, tax, or business guidance for the Indian market regarding: "${query}". Include concepts like Mutual Funds, GST, EPF/PPF, or startup frameworks if relevant. Add a disclaimer that you are not a registered financial advisor.`,
+      config: {
+        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian Chartered Accountant (CA) and financial advisor.`,
+      },
+    });
+    try { return response.text || ""; } catch (e) { return ""; }
+  } catch (error) {
+    console.error("Finance error:", error);
     throw error;
   }
 }

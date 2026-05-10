@@ -87,6 +87,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
+
+  if (process.env.NODE_ENV === "production") {
+    const KEEP_ALIVE_INTERVAL = 14 * 60 * 1000; // 14 mins
+    const selfUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${port}`;
+    setInterval(() => {
+      fetch(`${selfUrl}/api/health`).catch(() => {});
+    }, KEEP_ALIVE_INTERVAL);
+  }
+
   server.listen(port, () => {
     log(`🚀 Swadesh AI on http://localhost:${port}`);
     if (!process.env.DATABASE_URL) log("   ℹ Add DATABASE_URL to .env for memory/auth features.");

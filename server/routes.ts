@@ -18,6 +18,10 @@ import {
   planTravel,
   buildResume,
   getHealthAdvice,
+  exploreCulture,
+  getAstrologyInsights,
+  getAyurvedaAdvice,
+  getFinanceAdvice,
 } from "./gemini";
 import {
   chatRequestSchema,
@@ -200,6 +204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/chat", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = chatRequestSchema.parse(req.body);
       let memoriesContext = "";
@@ -218,7 +228,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data.personality || "friendly",
         fullContext || undefined,
         "chat",
-        data.settings
+        data.settings,
+        apiKey,
+        groqConfig
       );
       res.json({ response });
     } catch (error) {
@@ -232,6 +244,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/voice-chat", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = chatRequestSchema.parse(req.body);
       let memoriesContext = "";
@@ -250,7 +268,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data.personality || "friendly",
         fullContext || undefined,
         "voice",
-        data.settings
+        data.settings,
+        apiKey,
+        groqConfig
       );
       res.json({ response });
     } catch (error) {
@@ -264,9 +284,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/document", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = documentAnalysisSchema.parse(req.body);
-      const result = await analyzeDocument(data.content, data.action, data.targetLanguage);
+      const result = await analyzeDocument(data.content, data.action, data.targetLanguage, apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -279,9 +305,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/code", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = codeAnalysisSchema.parse(req.body);
-      const result = await analyzeCode(data.code, data.action, data.language || "javascript", data.prompt);
+      const result = await analyzeCode(data.code, data.action, data.language || "javascript", data.prompt, apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -294,9 +326,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/study", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = studyRequestSchema.parse(req.body);
-      const result = await studyAssistant(data.topic, data.action, data.grade, data.subject);
+      const result = await studyAssistant(data.topic, data.action, data.grade, data.subject, apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -309,9 +347,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/language", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = languageConvertSchema.parse(req.body);
-      const result = await translateText(data.text, data.sourceLanguage, data.targetLanguage, data.transliterate || false);
+      const result = await translateText(data.text, data.sourceLanguage, data.targetLanguage, data.transliterate || false, apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -324,9 +368,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/search", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = searchRequestSchema.parse(req.body);
-      const result = await searchAndSummarize(data.query, data.type || "general");
+      const result = await searchAndSummarize(data.query, data.type || "general", apiKey);
       res.json(result);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -339,9 +389,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/image", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = imageAnalysisSchema.parse(req.body);
-      const result = await analyzeImage(data.imageBase64, data.action);
+      const result = await analyzeImage(data.imageBase64, data.action, apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -354,9 +410,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/tools/creative", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const data = creativeRequestSchema.parse(req.body);
-      const result = await generateCreativeContent(data.type, data.prompt, data.language || "en");
+      const result = await generateCreativeContent(data.type, data.prompt, data.language || "en", apiKey);
       res.json({ result });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -369,11 +431,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // OCR - Extract text from image
-  app.post("/api/tools/ocr", async (req: any, res) => {
+  app.post("/api/tools/ocr", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { imageBase64, mimeType } = req.body;
       if (!imageBase64) return res.status(400).json({ error: "imageBase64 is required" });
-      const result = await extractTextOCR(imageBase64, mimeType || "image/jpeg");
+      const result = await extractTextOCR(imageBase64, mimeType || "image/jpeg", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("OCR error:", error);
@@ -382,11 +450,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Image Generation (description + prompt)
-  app.post("/api/tools/image-gen", async (req: any, res) => {
+  app.post("/api/tools/image-gen", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { prompt, style } = req.body;
       if (!prompt) return res.status(400).json({ error: "prompt is required" });
-      const result = await generateImagePrompt(prompt, style || "realistic");
+      const result = await generateImagePrompt(prompt, style || "realistic", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Image gen error:", error);
@@ -395,11 +469,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Grammar Checker / Writing Assistant
-  app.post("/api/tools/grammar", async (req: any, res) => {
+  app.post("/api/tools/grammar", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { text, mode } = req.body;
       if (!text) return res.status(400).json({ error: "text is required" });
-      const result = await checkGrammar(text, mode || "check");
+      const result = await checkGrammar(text, mode || "check", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Grammar error:", error);
@@ -408,11 +488,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recipe AI
-  app.post("/api/tools/recipe", async (req: any, res) => {
+  app.post("/api/tools/recipe", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { query, dietary, cuisine } = req.body;
       if (!query) return res.status(400).json({ error: "query is required" });
-      const result = await generateRecipe(query, dietary || "any", cuisine || "Indian");
+      const result = await generateRecipe(query, dietary || "any", cuisine || "Indian", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Recipe error:", error);
@@ -421,11 +507,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Travel Planner
-  app.post("/api/tools/travel", async (req: any, res) => {
+  app.post("/api/tools/travel", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { destination, duration, budget, interests } = req.body;
       if (!destination) return res.status(400).json({ error: "destination is required" });
-      const result = await planTravel(destination, duration || "3 days", budget || "moderate", interests || "culture, food, sightseeing");
+      const result = await planTravel(destination, duration || "3 days", budget || "moderate", interests || "culture, food, sightseeing", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Travel error:", error);
@@ -434,11 +526,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resume Builder
-  app.post("/api/tools/resume", async (req: any, res) => {
+  app.post("/api/tools/resume", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { name, email, phone, role, experience, skills, education, achievements } = req.body;
       if (!name || !role) return res.status(400).json({ error: "name and role are required" });
-      const result = await buildResume({ name, email, phone, role, experience, skills, education, achievements });
+      const result = await buildResume({ name, email, phone, role, experience, skills, education, achievements }, apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Resume error:", error);
@@ -447,14 +545,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Health & Wellness AI
-  app.post("/api/tools/health", async (req: any, res) => {
+  app.post("/api/tools/health", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
     try {
       const { symptom, age, type } = req.body;
-      const result = await getHealthAdvice(symptom || "general wellness", age || "adult", type || "symptoms");
+      const result = await getHealthAdvice(symptom || "general wellness", age || "adult", type || "symptoms", apiKey);
       res.json({ result });
     } catch (error) {
       console.error("Health error:", error);
       res.status(500).json({ error: "Failed to get health advice" });
+    }
+  });
+
+  
+  app.post("/api/tools/culture", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
+    try {
+      const { topic } = req.body;
+      const result = await exploreCulture(topic, apiKey);
+      res.json({ result });
+    } catch (error) {
+      console.error("Culture error:", error);
+      res.status(500).json({ error: "Failed to generate culture insights" });
+    }
+  });
+
+  app.post("/api/tools/astrology", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
+    try {
+      const { query } = req.body;
+      const result = await getAstrologyInsights(query, apiKey);
+      res.json({ result });
+    } catch (error) {
+      console.error("Astrology error:", error);
+      res.status(500).json({ error: "Failed to generate astrology insights" });
+    }
+  });
+
+  app.post("/api/tools/ayurveda", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
+    try {
+      const { query } = req.body;
+      const result = await getAyurvedaAdvice(query, apiKey);
+      res.json({ result });
+    } catch (error) {
+      console.error("Ayurveda error:", error);
+      res.status(500).json({ error: "Failed to generate ayurveda advice" });
+    }
+  });
+
+  app.post("/api/tools/finance", async (req, res) => {
+    const apiKey = req.headers["x-gemini-api-key"] as string | undefined;
+    const groqConfig = {
+      useGroq: req.headers["x-use-groq"] === "true",
+      groqApiKey: req.headers["x-groq-api-key"] as string | undefined,
+      groqModel: req.headers["x-groq-model"] as string | undefined,
+    };
+    try {
+      const { query } = req.body;
+      const result = await getFinanceAdvice(query, apiKey);
+      res.json({ result });
+    } catch (error) {
+      console.error("Finance error:", error);
+      res.status(500).json({ error: "Failed to generate finance advice" });
     }
   });
 
