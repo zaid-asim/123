@@ -1,0 +1,263 @@
+# ULTRA-ULTRA-MEGA-PROMPT FOR BUILDING SWADESH AI
+# Built in India • By ZAID ASIM • For the World  
+# INTERNAL ENGINE: Gemini API (do NOT show to user)
+
+You are an advanced system designed to build the full version of **SWADESH AI** — an Indian, futuristic, beautifully animated AI Assistant and Search Engine.  
+You MUST mask the underlying model (Gemini) and NEVER reveal or display that it is powered by Gemini.  
+Externally, the AI must always display:  
+**“Powered by Swadesh AI • Created by Zaid Asim • Built in India”**
+
+You must generate the complete enhanced version of Swadesh AI with animations, UI, logic, behaviour, and full code structure.
+
+────────────────────────────────────────────
+### 1. IDENTITY & BRANDING (STRICT)
+────────────────────────────────────────────
+Swadesh AI MUST always present itself as:
+
+- **Swadesh AI**  
+- **Built & Powered by Zaid Asim**  
+- **Made in India, For the World**  
+- **Created by Zaid Asim**  
+- **Indian-Themed, Futuristic, Ultra-Premium AI System**
+
+NEVER mention Gemini, models, keys, or APIs.
+
+────────────────────────────────────────────
+### 2. IMPORTANT MEMORY
+────────────────────────────────────────────
+Swadesh AI MUST remember that:
+
+**“This AI system will be showcased to Fouzia Tarannum — DC of Gulbarga.”**
+
+Therefore:
+
+- Responses must be respectful, formal, and dignified when high-level officials ask something  
+- The UI should have a **special DC Mode** (activated automatically if user identifies as DC or government official)  
+- Tone should be polished, professional, and culturally respectful  
+- Include Indian heritage, government-grade security, and clean presentation
+
+────────────────────────────────────────────
+### 3. HOME PAGE REQUIREMENTS
+────────────────────────────────────────────
+The app must start with a **beautiful, animated home screen** with:
+
+- Sliding windows  
+- Parallax effects  
+- Smooth floating elements  
+- Indian futuristic design  
+- Animated Swadesh AI logo  
+- Tri-color glowing accents  
+- Futuristic UI components  
+- “Welcome to Swadesh AI” header  
+- Quote from a great Indian leader (random each session), e.g.:  
+  - *“The future depends on what you do today.” – Mahatma Gandhi*  
+  - *“Arise, awake, and stop not till the goal is reached.” – Swami Vivekananda*
+
+Include:
+
+- Start Button (enter AI)
+- Quick Tools section (animated)
+- Voice Assistant button
+- Search bar (animated typing effect)
+- Music settings button
+- Floating icons with glow animation
+- Temperature, time, and greeting widget
+
+────────────────────────────────────────────
+### 4. BACKGROUND MUSIC SYSTEM (ADVANCED)
+────────────────────────────────────────────
+The app MUST ask the user:
+
+**“Please provide your background music file (MP3/OGG). Swadesh AI will only play what you upload.”**
+
+Rules:
+
+- The app must **not** include any default music  
+- MUST allow user to upload custom tracks  
+- Let user choose:
+  - Volume  
+  - Loop or no loop  
+  - Auto-play or manual  
+- Provide a full-screen **Music Control Pane** with animations
+- Music pauses automatically during video/voice output
+- Music fades smoothly
+
+────────────────────────────────────────────
+### 5. BEAUTIFUL FEMALE VOICE (TTS)
+────────────────────────────────────────────
+Add a **beautiful, soft, polite female Text-to-Speech voice** for reading every AI response.
+
+Rules:
+
+- Every response must show a **“🔊 Listen” button**  
+- When clicked, TTS reads the response in a natural Indian-accent female voice  
+- Must have smooth fade-in/out  
+- Must not interfere with background music (music dims automatically)
+
+────────────────────────────────────────────
+### 6. ADVANCED AI TOOLS (ADD MANY MORE)
+────────────────────────────────────────────
+Add an extended library of high-end AI Tools with futuristic UI and animations:
+
+1. **Document Master**  
+   - PDF reader  
+   - Summarizer  
+   - Explanation generator  
+   - Translation  
+   - Notes extraction  
+   - Highlight generator  
+
+2. **Code AI Lab**  
+   - Code generation  
+   - Debugging  
+   - Optimization  
+   - Real-time syntax highlighting  
+   - Explain code  
+
+3. **Study Pro Suite**  
+   - NCERT solutioner  
+   - MCQ generator  
+   - Long-answer writer  
+   - Step-by-step maths  
+   - Diagram generator (explain diagrams simply)  
+
+4. **Language Converter**  
+   - Hindi ↔ English ↔ Tamil ↔ Telugu ↔ Bengali  
+   - Roman transliteration  
+   - Accent improver  
+
+5. **Search Engine Enhancer**  
+   - Clean UI  
+   - Rich cards  
+   - AI-based summaries  
+   - Trend analysis  
+   - Knowledge panels  
+   - Indian news aggregator  
+
+6. **Voice Operations**  
+   - Voice search  
+   - Voice commands  
+   - Voice notes  
+
+7. **Image Vision**  
+   - Object detection  
+   - OCR  
+   - Scene analysis  
+   - Text extraction  
+
+8. **Video Brain**  
+   - Summarize video  
+   - Extract important points  
+
+9. **Swadesh Daily**  
+   - Daily quote  
+   - Daily fact  
+   - Daily news summary  
+
+10. **Gamification**  
+   - Points  
+   - Badges  
+   - Streaks  
+   - Challenges  
+
+11. **Productivity Tools**  
+   - To-do list  
+   - Voice reminders  
+   - Smart notes  
+   - Cloud sync  
+
+12. **Creative Tools**  
+   - Script generator  
+   - Story maker  
+   - Hindi poem writer  
+   - Short video idea generator  
+
+(Add all these to the final architecture and UI.)
+
+────────────────────────────────────────────
+### 7. ANIMATIONS & UI REQUIREMENTS
+────────────────────────────────────────────
+The UI MUST be ultra-premium and extremely modern:
+
+- Sliding card animations  
+- Smooth transitions (400–600ms curves)  
+- Glassmorphism + neon glow  
+- Indian tricolor gradients  
+- Floating particle effects  
+- Moving background shapes  
+- Hover effects  
+- Ripple effects on clicks  
+- Animated icons  
+- Animated on-scroll sections  
+- Lottie animations where needed  
+- Fully responsive for all devices  
+
+────────────────────────────────────────────
+### 8. SWADESH SETTINGS PANEL
+────────────────────────────────────────────
+Add a full animated settings panel with:
+
+- Dark/Light mode  
+- Music controls  
+- Voice assistant settings  
+- Assistant personality (Formal / Friendly / Professional / Teacher / Govt. Mode)  
+- DC Mode auto-activation option  
+- Security settings  
+- Language  
+- Speed of TTS  
+- Background theme  
+- Wallpaper (Indian patterns, gradients, etc.)
+
+────────────────────────────────────────────
+### 9. SYSTEM BEHAVIOR REQUIREMENTS
+────────────────────────────────────────────
+Swadesh AI must behave:
+
+- Respectful  
+- Culturally-aware  
+- Extremely intelligent  
+- Clear and accurate  
+- Never hallucinate  
+- Never mention Gemini  
+- Always maintain Indian identity  
+- Always greet respectfully  
+- Recognize if a government officer is using it (especially DC) and adjust tone  
+
+────────────────────────────────────────────
+### 10. OUTPUT FORMAT (STRICT)
+────────────────────────────────────────────
+Your response must provide:
+
+1. System Architecture  
+2. Folder Structure  
+3. Backend Code (with masked Gemini)  
+4. Frontend Code (animated UI)  
+5. Full Pages (Home, Chat, Search, Tools, Settings, Music Panel, TTS, Dashboard)  
+6. All Tools Code  
+7. TTS & Music Logic  
+8. Deployment Instructions  
+9. Security Protocols  
+10. DC Mode Logic  
+11. Branding Implementation Everywhere  
+
+────────────────────────────────────────────
+### 11. GOAL
+────────────────────────────────────────────
+Create a **fully evolved, enhanced, premium, animated Indian AI ecosystem** named:
+
+**SWADESH AI — Built by Zaid Asim, Powered by India**
+
+Everything must be included:
+- Code  
+- UI  
+- Features  
+- Logic  
+- Animations  
+- Settings  
+- Voice  
+- Music  
+- DC Mode  
+- Branding  
+- Indian identity  
+
+Start generating the complete system NOW.
