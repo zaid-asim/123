@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useTheme } from "@/lib/theme-provider";
+import { useSettings } from "@/lib/settings-context";
 
 interface Particle {
   x: number;
@@ -14,6 +15,7 @@ interface Particle {
 export function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
+  const { settings } = useSettings();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -25,12 +27,42 @@ export function ParticleBackground() {
     let animationId: number;
     let particles: Particle[] = [];
 
-    const colors = [
-      "hsl(24, 95%, 55%)",
-      "hsl(145, 63%, 45%)",
-      "hsl(220, 70%, 55%)",
-      "hsl(0, 0%, 100%)",
-    ];
+    const getColorsByWallpaper = (wp: string) => {
+      switch (wp) {
+        case "peacock":
+          return [
+            "hsl(200, 95%, 45%)", // peacock blue
+            "hsl(165, 80%, 40%)", // peacock teal
+            "hsl(145, 60%, 45%)", // green
+            "hsl(220, 85%, 55%)", // deep blue
+          ];
+        case "lotus":
+          return [
+            "hsl(340, 95%, 65%)", // lotus pink
+            "hsl(325, 85%, 55%)", // magenta
+            "hsl(350, 90%, 60%)", // soft red
+            "hsl(20, 95%, 60%)",  // saffron/coral
+          ];
+        case "mandala":
+          return [
+            "hsl(275, 90%, 55%)", // purple
+            "hsl(285, 80%, 45%)", // deep violet
+            "hsl(24, 95%, 55%)",  // saffron
+            "hsl(35, 95%, 55%)",  // gold
+          ];
+        case "gradient":
+        case "tricolor":
+        default:
+          return [
+            "hsl(24, 95%, 55%)",  // saffron
+            "hsl(145, 63%, 45%)", // green
+            "hsl(220, 70%, 55%)", // blue
+            "hsl(0, 0%, 100%)",   // white
+          ];
+      }
+    };
+
+    const colors = getColorsByWallpaper(settings.wallpaper);
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -106,7 +138,7 @@ export function ParticleBackground() {
       cancelAnimationFrame(animationId);
       window.removeEventListener("resize", resize);
     };
-  }, [theme]);
+  }, [theme, settings.wallpaper]);
 
   return (
     <canvas
