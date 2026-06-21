@@ -7,8 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SwadeshLogo } from "@/components/swadesh-logo";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { PageHeader } from "@/components/page-header";
 import { ParticleBackground } from "@/components/particle-background";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -50,17 +49,7 @@ export default function StudyPro() {
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
       
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="Study Pro Suite" />
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-4xl relative z-10">
         <div className="flex items-center gap-3 mb-8">

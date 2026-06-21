@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Moon, Sun, Volume2, Languages, Palette, Shield,
-  User, Brain, ChevronRight, PlayCircle, Zap, MessageSquare, LayoutTemplate
+  User, Brain, ChevronRight, PlayCircle, Zap, MessageSquare, LayoutTemplate,
+  Eye, EyeOff, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +20,8 @@ import { useSettings } from "@/lib/settings-context";
 import { useTheme } from "@/lib/theme-provider";
 import { useTTS, type VoiceCategory } from "@/lib/tts-context";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/queryClient";
 
 const personalities = [
   { value: "formal", label: "Formal", description: "Professional and polished responses" },
@@ -68,6 +72,82 @@ export default function Settings() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const { theme, setTheme } = useTheme();
   const { categorizedVoices, selectedVoice, setSelectedVoice, previewVoice, voicePitch, setVoicePitch } = useTTS();
+  const { toast } = useToast();
+
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [showGroqKey, setShowGroqKey] = useState(false);
+  const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+  const [showGrokKey, setShowGrokKey] = useState(false);
+  const [showDeepseekKey, setShowDeepseekKey] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+
+  const [geminiInputKey, setGeminiInputKey] = useState(settings.customApiKey || "");
+  const [groqInputKey, setGroqInputKey] = useState(settings.groqApiKey || "");
+  const [openRouterInputKey, setOpenRouterInputKey] = useState(settings.openRouterApiKey || "");
+  const [openAiInputKey, setOpenAiInputKey] = useState(settings.openAiApiKey || "");
+  const [grokInputKey, setGrokInputKey] = useState(settings.grokApiKey || "");
+  const [deepseekInputKey, setDeepseekInputKey] = useState(settings.deepseekApiKey || "");
+  const [anthropicInputKey, setAnthropicInputKey] = useState(settings.anthropicApiKey || "");
+
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
+  const [isValidatingGroq, setIsValidatingGroq] = useState(false);
+  const [isValidatingOpenRouter, setIsValidatingOpenRouter] = useState(false);
+  const [isValidatingOpenAi, setIsValidatingOpenAi] = useState(false);
+  const [isValidatingGrok, setIsValidatingGrok] = useState(false);
+  const [isValidatingDeepseek, setIsValidatingDeepseek] = useState(false);
+  const [isValidatingAnthropic, setIsValidatingAnthropic] = useState(false);
+
+  const testAndSaveKey = async (opts: {
+    endpoint: string;
+    headerKey: string;
+    headerModel?: string;
+    inputKey: string;
+    model: string;
+    settingsKey: string;
+    setValidating: (b: boolean) => void;
+    providerName: string;
+  }) => {
+    const { endpoint, headerKey, headerModel, inputKey, model,
+            settingsKey, setValidating, providerName } = opts;
+
+    if (!inputKey.trim()) {
+      toast({
+        title: "Missing Key",
+        description: `Please enter your ${providerName} API key first.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    setValidating(true);
+    try {
+      const headers: Record<string, string> = { [headerKey]: inputKey.trim() };
+      if (headerModel) headers[headerModel] = model;
+      const res = await fetch(getApiUrl(endpoint), { method: "POST", headers });
+      const data = await res.json();
+      if (res.ok && data.valid) {
+        updateSettings({ [settingsKey]: inputKey.trim() } as any);
+        toast({
+          title: `✅ ${providerName} Key Saved`,
+          description: "Key is valid and saved to your settings."
+        });
+      } else {
+        toast({
+          title: `❌ ${providerName} Validation Failed`,
+          description: data.error || "Invalid key. Please check and try again.",
+          variant: "destructive"
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Network Error",
+        description: err.message || "Could not reach validation server.",
+        variant: "destructive"
+      });
+    } finally {
+      setValidating(false);
+    }
+  };
 
   const grouped = categoryOrder.reduce<Record<VoiceCategory, typeof categorizedVoices>>((acc, cat) => {
     acc[cat] = categorizedVoices.filter(cv => cv.category === cat);
@@ -156,61 +236,653 @@ export default function Settings() {
                 </Select>
               </div>
 
-              <div className="pt-4 border-t border-border/50">
-                <div className="flex items-center justify-between mb-4">
+              <div className="pt-4 border-t border-border/50 space-y-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Label>Use Custom API Key (Gemini)</Label>
-                    <p className="text-xs text-muted-foreground mt-1">Override the default environment key.</p>
+                    <Label>Reasoning Engine Pipeline</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Route queries through a 7-pass verified reasoning loop to eliminate hallucinations and improve depth.
+                    </p>
                   </div>
-                  <Switch checked={settings.useCustomApiKey} onCheckedChange={c => updateSettings({ useCustomApiKey: c })} />
+                  <Switch
+                    checked={settings.useReasoningPipeline}
+                    onCheckedChange={(c) => updateSettings({ useReasoningPipeline: c })}
+                  />
                 </div>
-                {settings.useCustomApiKey && (
-                  <div className="animate-fade-in space-y-2 mb-4">
-                    <Label>Gemini API Key</Label>
-                    <Input 
-                      type="password" 
-                      placeholder="AIzaSy..." 
-                      value={settings.customApiKey}
-                      onChange={(e) => updateSettings({ customApiKey: e.target.value })}
-                    />
-                    <p className="text-[10px] text-muted-foreground">Your key is stored locally and sent securely.</p>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between mb-4 mt-6">
-                  <div>
-                    <Label>Use Groq Engine</Label>
-                    <p className="text-xs text-muted-foreground mt-1">Switch from Gemini to Groq for ultra-fast generation.</p>
-                  </div>
-                  <Switch checked={settings.useGroq} onCheckedChange={c => updateSettings({ useGroq: c })} />
-                </div>
-                {settings.useGroq && (
-                  <div className="animate-fade-in space-y-4">
-                    <div>
-                      <Label>Groq API Key</Label>
-                      <Input 
-                        type="password" 
-                        placeholder="gsk_..." 
-                        value={settings.groqApiKey}
-                        onChange={(e) => updateSettings({ groqApiKey: e.target.value })}
-                        className="mt-2"
+
+                {settings.useReasoningPipeline && (
+                  <div className="pl-4 border-l border-primary/20 space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm">Show Confidence Badges</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Display computed trust indicators on AI responses.</p>
+                      </div>
+                      <Switch
+                        checked={settings.showConfidence}
+                        onCheckedChange={(c) => updateSettings({ showConfidence: c })}
                       />
                     </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm">Show Grounded Sources</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Show web links and source chips used for grounding.</p>
+                      </div>
+                      <Switch
+                        checked={settings.showSources}
+                        onCheckedChange={(c) => updateSettings({ showSources: c })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm">Show Reasoning Traces</Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">Expose timeline breakdowns and critique audits.</p>
+                      </div>
+                      <Switch
+                        checked={settings.showReasoningTrace}
+                        onCheckedChange={(c) => updateSettings({ showReasoningTrace: c })}
+                      />
+                    </div>
+
                     <div>
-                      <Label>Groq Model</Label>
-                      <Select value={settings.groqModel || "llama3-8b-8192"} onValueChange={(v) => updateSettings({ groqModel: v })}>
-                        <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                      <Label className="text-sm mb-1.5 block">Critic Strictness</Label>
+                      <Select
+                        value={settings.criticStrictness}
+                        onValueChange={(v) => updateSettings({ criticStrictness: v as any })}
+                      >
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="llama3-8b-8192">Llama 3 8B</SelectItem>
-                          <SelectItem value="llama3-70b-8192">Llama 3 70B</SelectItem>
-                          <SelectItem value="mixtral-8x7b-32768">Mixtral 8x7B</SelectItem>
-                          <SelectItem value="gemma-7b-it">Gemma 7B</SelectItem>
+                          <SelectItem value="lenient">Lenient (Catch major errors)</SelectItem>
+                          <SelectItem value="standard">Standard (Catch bias & logic leaps)</SelectItem>
+                          <SelectItem value="strict">Strict (High-stakes precision review)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">Groq replaces Gemini for text generation when enabled.</p>
                   </div>
                 )}
+              </div>
+
+              <div className="pt-4 border-t border-border/50 space-y-4">
+                {/* Gemini Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  (!settings.useGroq && !settings.useOpenRouter && !settings.useOpenAI && !settings.useGrok && !settings.useDeepSeek && !settings.useAnthropic)
+                    ? "border-l-4 border-l-saffron-500 border-border bg-saffron-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">Google Gemini Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Use Google's multimodal models. Custom key is optional.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground mr-1">Custom Key:</span>
+                      <Switch checked={settings.useCustomApiKey} onCheckedChange={c => updateSettings({ useCustomApiKey: c })} />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2 border-t border-border/20">
+                    <Label className="text-xs">Gemini Model</Label>
+                    <Select value={settings.geminiModel || "gemini-3.5-flash"} onValueChange={(v) => updateSettings({ geminiModel: v })}>
+                      <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gemini-3.5-flash">Gemini 3.5 Flash (Recommended)</SelectItem>
+                        <SelectItem value="gemini-3.5-pro">Gemini 3.5 Pro (Reasoning)</SelectItem>
+                        <SelectItem value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Fast)</SelectItem>
+                        <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                        <SelectItem value="gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {settings.useCustomApiKey && (
+                    <div className="animate-fade-in space-y-3 pt-2 border-t border-border/20">
+                      <Label htmlFor="gemini-api-key" className="text-xs">Gemini API Key</Label>
+                      <div className="relative flex items-center">
+                        <Input 
+                          id="gemini-api-key"
+                          type={showGeminiKey ? "text" : "password"} 
+                          placeholder="AIzaSy..." 
+                          value={geminiInputKey}
+                          onChange={(e) => setGeminiInputKey(e.target.value)}
+                          className="pr-10 h-9 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowGeminiKey(!showGeminiKey)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          title={showGeminiKey ? "Hide API key" : "Show API key"}
+                        >
+                          {showGeminiKey ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!geminiInputKey.trim()) {
+                              toast({
+                                title: "Validation Error",
+                                description: "Please enter a Gemini API key first.",
+                                variant: "destructive",
+                              });
+                              return;
+                            }
+                            setIsValidatingKey(true);
+                            try {
+                              const res = await fetch("/api/test-key", {
+                                method: "POST",
+                                headers: {
+                                  "x-gemini-api-key": geminiInputKey.trim()
+                                }
+                              });
+                              if (res.ok) {
+                                updateSettings({ customApiKey: geminiInputKey.trim() });
+                                toast({
+                                  title: "Key Validation Success",
+                                  description: "Your Gemini API key is valid and has been saved.",
+                                });
+                              } else {
+                                const errData = await res.json();
+                                toast({
+                                  title: "Key Validation Failed",
+                                  description: errData.error || "The key could not be validated. Please check it and try again.",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (err: any) {
+                              toast({
+                                title: "Network Error",
+                                description: err.message || "Failed to contact the validation server.",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setIsValidatingKey(false);
+                            }
+                          }}
+                          disabled={isValidatingKey}
+                          size="sm"
+                          className="w-full bg-saffron-500 hover:bg-saffron-600 text-white font-medium flex items-center justify-center gap-1.5 h-8 text-xs"
+                        >
+                          {isValidatingKey ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              Validating...
+                            </>
+                          ) : (
+                            "Save & Test Key"
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-[9px] text-muted-foreground">Stored locally in your browser context.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Groq Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useGroq
+                    ? "border-l-4 border-l-blue-500 border-border bg-blue-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">Groq Speed Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Ultra-fast token inference for instant responses.</p>
+                    </div>
+                    <Switch checked={settings.useGroq} onCheckedChange={c => updateSettings({ useGroq: c, useOpenRouter: false, useOpenAI: false, useGrok: false, useDeepSeek: false, useAnthropic: false })} />
+                  </div>
+                  {settings.useGroq && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="groq-api-key" className="text-xs">Groq API Key</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input 
+                            id="groq-api-key"
+                            type={showGroqKey ? "text" : "password"} 
+                            placeholder="gsk_..." 
+                            value={groqInputKey}
+                            onChange={(e) => setGroqInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowGroqKey(!showGroqKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            title={showGroqKey ? "Hide API key" : "Show API key"}
+                          >
+                            {showGroqKey ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Groq Model</Label>
+                        <Select value={settings.groqModel || "llama-4-scout-17b-16e-instruct"} onValueChange={(v) => updateSettings({ groqModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="llama-4-scout-17b-16e-instruct">Llama 4 Scout (Recommended)</SelectItem>
+                            <SelectItem value="llama-4-maverick-17b-128e-instruct">Llama 4 Maverick</SelectItem>
+                            <SelectItem value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile</SelectItem>
+                            <SelectItem value="deepseek-r1-distill-llama-70b">DeepSeek R1 Distill Llama 70B</SelectItem>
+                            <SelectItem value="compound">Compound (Agentic)</SelectItem>
+                            <SelectItem value="llama3-8b-8192">Llama 3 8B (Legacy)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/groq",
+                          headerKey: "x-groq-api-key",
+                          headerModel: "x-groq-model",
+                          inputKey: groqInputKey,
+                          model: settings.groqModel || "llama-4-scout-17b-16e-instruct",
+                          settingsKey: "groqApiKey",
+                          setValidating: setIsValidatingGroq,
+                          providerName: "Groq"
+                        })}
+                        disabled={isValidatingGroq}
+                        size="sm"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-1.5 h-8 text-xs"
+                      >
+                        {isValidatingGroq ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</>
+                        ) : (
+                          "Save & Test Key"
+                        )}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally in your browser context.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* OpenRouter Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useOpenRouter
+                    ? "border-l-4 border-l-purple-500 border-border bg-purple-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">OpenRouter Universal Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">Route to Claude, DeepSeek, Llama, and more.</p>
+                    </div>
+                    <Switch checked={settings.useOpenRouter} onCheckedChange={c => updateSettings({ useOpenRouter: c, useGroq: false, useOpenAI: false, useGrok: false, useDeepSeek: false, useAnthropic: false })} />
+                  </div>
+                  {settings.useOpenRouter && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="openrouter-api-key" className="text-xs">OpenRouter API Key</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input 
+                            id="openrouter-api-key"
+                            type={showOpenRouterKey ? "text" : "password"} 
+                            placeholder="sk-or-v1-..." 
+                            value={openRouterInputKey}
+                            onChange={(e) => setOpenRouterInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            title={showOpenRouterKey ? "Hide API key" : "Show API key"}
+                          >
+                            {showOpenRouterKey ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">OpenRouter Model</Label>
+                        <Select value={settings.openRouterModel || "google/gemini-3.5-flash"} onValueChange={(v) => updateSettings({ openRouterModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="google/gemini-3.5-flash">Gemini 3.5 Flash (Recommended)</SelectItem>
+                            <SelectItem value="google/gemini-3.5-pro">Gemini 3.5 Pro</SelectItem>
+                            <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+                            <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+                            <SelectItem value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B Instruct</SelectItem>
+                            <SelectItem value="anthropic/claude-3.5-sonnet">Claude 3.5 Sonnet</SelectItem>
+                            <SelectItem value="deepseek/deepseek-chat">DeepSeek V3 (Chat)</SelectItem>
+                            <SelectItem value="deepseek/deepseek-r1">DeepSeek R1</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/openrouter",
+                          headerKey: "x-openrouter-api-key",
+                          headerModel: "x-openrouter-model",
+                          inputKey: openRouterInputKey,
+                          model: settings.openRouterModel || "google/gemini-2.5-flash",
+                          settingsKey: "openRouterApiKey",
+                          setValidating: setIsValidatingOpenRouter,
+                          providerName: "OpenRouter"
+                        })}
+                        disabled={isValidatingOpenRouter}
+                        size="sm"
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium flex items-center justify-center gap-1.5 h-8 text-xs"
+                      >
+                        {isValidatingOpenRouter ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</>
+                        ) : (
+                          "Save & Test Key"
+                        )}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally in your browser context.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* OpenAI Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useOpenAI
+                    ? "border-l-4 border-l-emerald-500 border-border bg-emerald-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">OpenAI Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        GPT-4o, GPT-4o-mini, o1, o3-mini and more.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.useOpenAI}
+                      onCheckedChange={c => updateSettings({
+                        useOpenAI: c, useGroq: false, useOpenRouter: false, useGrok: false, useDeepSeek: false, useAnthropic: false
+                      })}
+                    />
+                  </div>
+                  {settings.useOpenAI && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="openai-api-key" className="text-xs">OpenAI API Key</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input
+                            id="openai-api-key"
+                            type={showOpenAiKey ? "text" : "password"}
+                            placeholder="sk-..."
+                            value={openAiInputKey}
+                            onChange={e => setOpenAiInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button type="button" onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showOpenAiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">OpenAI Model</Label>
+                        <Select value={settings.openAiModel || "gpt-5.5"} onValueChange={v => updateSettings({ openAiModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gpt-5.5">GPT-5.5 (Flagship)</SelectItem>
+                            <SelectItem value="gpt-5.4-thinking">GPT-5.4 Thinking (Reasoning)</SelectItem>
+                            <SelectItem value="gpt-5.4-pro">GPT-5.4 Pro</SelectItem>
+                            <SelectItem value="gpt-5.4-mini">GPT-5.4 Mini</SelectItem>
+                            <SelectItem value="gpt-4o-mini">GPT-4o Mini (Legacy)</SelectItem>
+                            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                            <SelectItem value="o1-mini">o1 Mini</SelectItem>
+                            <SelectItem value="o3-mini">o3 Mini</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="button" size="sm"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium h-8 text-xs flex items-center justify-center gap-1.5"
+                        disabled={isValidatingOpenAi}
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/openai",
+                          headerKey: "x-openai-api-key",
+                          headerModel: "x-openai-model",
+                          inputKey: openAiInputKey,
+                          model: settings.openAiModel || "gpt-5.5",
+                          settingsKey: "openAiApiKey",
+                          setValidating: setIsValidatingOpenAi,
+                          providerName: "OpenAI"
+                        })}
+                      >
+                        {isValidatingOpenAi ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</> : "Save & Test Key"}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally. Never sent to Swadesh servers.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Grok (xAI) Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useGrok
+                    ? "border-l-4 border-l-violet-500 border-border bg-violet-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">Grok Engine <span className="text-[10px] text-violet-400 ml-1">by xAI</span></Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Elon Musk's xAI — Grok-2, Grok-3, Grok Vision.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.useGrok}
+                      onCheckedChange={c => updateSettings({
+                        useGrok: c, useGroq: false, useOpenRouter: false, useOpenAI: false, useDeepSeek: false, useAnthropic: false
+                      })}
+                    />
+                  </div>
+                  {settings.useGrok && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="grok-api-key" className="text-xs">Grok API Key (xAI)</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input
+                            id="grok-api-key"
+                            type={showGrokKey ? "text" : "password"}
+                            placeholder="xai-..."
+                            value={grokInputKey}
+                            onChange={e => setGrokInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button type="button" onClick={() => setShowGrokKey(!showGrokKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showGrokKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Grok Model</Label>
+                        <Select value={settings.grokModel || "grok-4.3"} onValueChange={v => updateSettings({ grokModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="grok-4.3">Grok-4.3 (Recommended)</SelectItem>
+                            <SelectItem value="grok-4.20">Grok-4.20</SelectItem>
+                            <SelectItem value="grok-2-1212">Grok-2</SelectItem>
+                            <SelectItem value="grok-3-beta">Grok-3 Beta</SelectItem>
+                            <SelectItem value="grok-3-mini-beta">Grok-3 Mini Beta</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="button" size="sm"
+                        className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium h-8 text-xs flex items-center justify-center gap-1.5"
+                        disabled={isValidatingGrok}
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/grok",
+                          headerKey: "x-grok-api-key",
+                          headerModel: "x-grok-model",
+                          inputKey: grokInputKey,
+                          model: settings.grokModel || "grok-4.3",
+                          settingsKey: "grokApiKey",
+                          setValidating: setIsValidatingGrok,
+                          providerName: "Grok (xAI)"
+                        })}
+                      >
+                        {isValidatingGrok ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</> : "Save & Test Key"}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally. Never sent to Swadesh servers.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* DeepSeek Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useDeepSeek
+                    ? "border-l-4 border-l-cyan-500 border-border bg-cyan-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">DeepSeek Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        State-of-the-art cost-effective models (DeepSeek V3 / R1).
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.useDeepSeek}
+                      onCheckedChange={c => updateSettings({
+                        useDeepSeek: c, useGroq: false, useOpenRouter: false, useOpenAI: false, useGrok: false, useAnthropic: false
+                      })}
+                    />
+                  </div>
+                  {settings.useDeepSeek && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="deepseek-api-key" className="text-xs">DeepSeek API Key</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input
+                            id="deepseek-api-key"
+                            type={showDeepseekKey ? "text" : "password"}
+                            placeholder="sk-..."
+                            value={deepseekInputKey}
+                            onChange={e => setDeepseekInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button type="button" onClick={() => setShowDeepseekKey(!showDeepseekKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showDeepseekKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">DeepSeek Model</Label>
+                        <Select value={settings.deepseekModel || "deepseek-chat"} onValueChange={v => updateSettings({ deepseekModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="deepseek-chat">DeepSeek Chat (V3 - Flagship)</SelectItem>
+                            <SelectItem value="deepseek-reasoner">DeepSeek Reasoner (R1 - Reasoning)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="button" size="sm"
+                        className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-medium h-8 text-xs flex items-center justify-center gap-1.5"
+                        disabled={isValidatingDeepseek}
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/deepseek",
+                          headerKey: "x-deepseek-api-key",
+                          headerModel: "x-deepseek-model",
+                          inputKey: deepseekInputKey,
+                          model: settings.deepseekModel || "deepseek-chat",
+                          settingsKey: "deepseekApiKey",
+                          setValidating: setIsValidatingDeepseek,
+                          providerName: "DeepSeek"
+                        })}
+                      >
+                        {isValidatingDeepseek ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</> : "Save & Test Key"}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally. Never sent to Swadesh servers.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Anthropic Engine Block */}
+                <div className={cn(
+                  "p-4 rounded-lg border transition-all duration-300 bg-card/25 space-y-4",
+                  settings.useAnthropic
+                    ? "border-l-4 border-l-orange-500 border-border bg-orange-500/[0.02] shadow-sm"
+                    : "border-border/40 opacity-70"
+                )}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-semibold">Anthropic Engine</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Claude 3.5 Sonnet, Claude 3.5 Haiku, and more.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={settings.useAnthropic}
+                      onCheckedChange={c => updateSettings({
+                        useAnthropic: c, useGroq: false, useOpenRouter: false, useOpenAI: false, useGrok: false, useDeepSeek: false
+                      })}
+                    />
+                  </div>
+                  {settings.useAnthropic && (
+                    <div className="animate-fade-in space-y-4 pt-2 border-t border-border/20">
+                      <div>
+                        <Label htmlFor="anthropic-api-key" className="text-xs">Anthropic API Key</Label>
+                        <div className="relative flex items-center mt-1.5">
+                          <Input
+                            id="anthropic-api-key"
+                            type={showAnthropicKey ? "text" : "password"}
+                            placeholder="sk-ant-..."
+                            value={anthropicInputKey}
+                            onChange={e => setAnthropicInputKey(e.target.value)}
+                            className="pr-10 h-9 text-xs"
+                          />
+                          <button type="button" onClick={() => setShowAnthropicKey(!showAnthropicKey)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                            {showAnthropicKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Anthropic Model</Label>
+                        <Select value={settings.anthropicModel || "claude-3-5-sonnet-latest"} onValueChange={v => updateSettings({ anthropicModel: v })}>
+                          <SelectTrigger className="mt-1.5 h-9 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet (Recommended)</SelectItem>
+                            <SelectItem value="claude-3-5-haiku-latest">Claude 3.5 Haiku (Fast)</SelectItem>
+                            <SelectItem value="claude-3-5-opus-latest">Claude 3.5 Opus (Frontier)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button type="button" size="sm"
+                        className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium h-8 text-xs flex items-center justify-center gap-1.5"
+                        disabled={isValidatingAnthropic}
+                        onClick={() => testAndSaveKey({
+                          endpoint: "/api/test-key/anthropic",
+                          headerKey: "x-anthropic-api-key",
+                          headerModel: "x-anthropic-model",
+                          inputKey: anthropicInputKey,
+                          model: settings.anthropicModel || "claude-3-5-sonnet-latest",
+                          settingsKey: "anthropicApiKey",
+                          setValidating: setIsValidatingAnthropic,
+                          providerName: "Anthropic"
+                        })}
+                      >
+                        {isValidatingAnthropic ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Validating...</> : "Save & Test Key"}
+                      </Button>
+                      <p className="text-[9px] text-muted-foreground">Stored locally. Never sent to Swadesh servers.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>

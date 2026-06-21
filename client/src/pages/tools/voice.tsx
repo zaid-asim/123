@@ -27,13 +27,15 @@ export default function VoiceOperations() {
         message: text,
         personality: settings.personality,
         context: "voice",
+        settings: { useReasoningPipeline: false }
       });
       return response.json();
     },
     onSuccess: (data) => {
-      setResponse(data.response);
+      const cleanText = data.response.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim();
+      setResponse(cleanText);
       if (settings.ttsEnabled) {
-        speak(data.response);
+        speak(cleanText);
       }
     },
   });

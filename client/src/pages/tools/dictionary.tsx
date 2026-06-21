@@ -28,9 +28,10 @@ export default function DictionaryPage() {
             const res = await apiRequest("POST", "/api/chat", {
                 message: `Provide a comprehensive dictionary entry for the word "${word}". Include: 1) Definition(s) with part of speech, 2) Etymology/origin, 3) 2-3 example sentences, 4) Synonyms, 5) Antonyms, 6) Hindi translation (if applicable). Format clearly with section headers.`,
                 personality: "teacher",
+                settings: { useReasoningPipeline: false }
             });
             const data = await res.json();
-            return { word, definition: data.response };
+            return { word, definition: data.response.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim() };
         },
         onSuccess: (data) => setResult(data),
         onError: () => toast({ title: "Word lookup failed", variant: "destructive" }),

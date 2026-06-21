@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Search as SearchIcon, Loader2, ExternalLink, Sparkles } from "lucide-react";
+import { ArrowLeft, Search as SearchIcon, Loader2, ExternalLink, Sparkles, Brain, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,9 @@ import { SwadeshLogo } from "@/components/swadesh-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/page-header";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Search() {
   const [, navigate] = useLocation();
@@ -19,6 +22,30 @@ export default function Search() {
   const [query, setQuery] = useState(initialQuery);
   const [searchType, setSearchType] = useState<"general" | "news" | "academic">("general");
   const [results, setResults] = useState<{ summary: string; sources: Array<{ title: string; url: string; snippet: string }> } | null>(null);
+  const { toast } = useToast();
+  const { isGuest } = useAuth();
+
+  const saveMemoryMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/memories", {
+        content,
+        category: "learning"
+      });
+    },
+    onSuccess: () => {
+      if (isGuest) {
+        toast({ 
+          title: "Saved to temporary Guest Memory!", 
+          description: "This will only persist for your current browser session. Log in to save memories permanently."
+        });
+      } else {
+        toast({ title: "Saved search summary to memory!" });
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to save to memory.", variant: "destructive" });
+    }
+  });
 
   const searchMutation = useMutation({
     mutationFn: async () => {
@@ -43,18 +70,7 @@ export default function Search() {
   return (
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
-      
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="AI-Powered Search" />
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-4xl relative z-10">
         <div className="text-center mb-8">
@@ -112,8 +128,20 @@ export default function Search() {
                 <div className="w-10 h-10 rounded-full tricolor-gradient flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h2 className="font-semibold mb-2">AI Summary</h2>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h2 className="font-semibold">AI Summary</h2>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => saveMemoryMutation.mutate(`Search Summary for "${query}": ${results.summary}`)}
+                      disabled={saveMemoryMutation.isPending}
+                      className="h-8 w-8 text-saffron-500 hover:bg-saffron-500/10"
+                      title="Save to Memory"
+                    >
+                      <Brain className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <p className="text-foreground/90 whitespace-pre-wrap">{results.summary}</p>
                 </div>
               </div>

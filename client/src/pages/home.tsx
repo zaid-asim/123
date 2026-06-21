@@ -16,10 +16,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ToolCard } from "@/components/tool-card";
 import { indianQuotes } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { useSettings, getEngineDetails } from "@/lib/settings-context";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import type { Conversation } from "@shared/schema";
 import { MessageSquare, Plus } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 const tools = [
   // Core AI Tools
@@ -61,6 +63,8 @@ const tools = [
 export default function Home() {
   const [, navigate] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { settings } = useSettings();
+  const engine = getEngineDetails(settings);
   const [quote, setQuote] = useState(indianQuotes[0]);
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -95,7 +99,44 @@ export default function Home() {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full tricolor-gradient-animated" />
-            <span className="font-bold text-gradient-tricolor hidden sm:inline">SWADESH AI</span>
+            <span className="font-bold text-gradient-tricolor-animated hidden sm:inline">SWADESH AI</span>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className={cn(
+                  "hidden md:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border shadow-sm transition-all cursor-pointer hover:bg-muted/40",
+                  engine.bgClass
+                )}
+                onClick={() => navigate("/settings")}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className={cn(
+                      "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                      engine.colorClass
+                    )}></span>
+                    <span className={cn(
+                      "relative inline-flex rounded-full h-2 w-2",
+                      engine.colorClass
+                    )}></span>
+                  </span>
+                  <span>{engine.name}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[280px] p-3 text-xs glassmorphism border-border/60">
+                <div className="space-y-1">
+                  <div className="font-bold flex items-center gap-1">
+                    <span className={cn("w-2 h-2 rounded-full", engine.colorClass)} />
+                    {engine.provider} Engine Active
+                  </div>
+                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                    {engine.desc}
+                  </p>
+                  <div className="text-[10px] text-primary/70 font-semibold pt-1">
+                    Click to manage engines in settings
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-2">

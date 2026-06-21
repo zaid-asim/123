@@ -64,9 +64,10 @@ export default function CalculatorPage() {
             const res = await apiRequest("POST", "/api/chat", {
                 message: `Explain this math calculation step by step in a simple way: ${expr}. Be concise (3-4 lines max).`,
                 personality: "teacher",
+                settings: { useReasoningPipeline: false }
             });
             const data = await res.json();
-            return data.response as string;
+            return data.response.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim();
         },
         onSuccess: (data) => setAiExplanation(data),
         onError: () => toast({ title: "Could not get AI explanation", variant: "destructive" }),

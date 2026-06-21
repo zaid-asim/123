@@ -10,7 +10,31 @@ import { SwadeshLogo } from "@/components/swadesh-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import { useMusic } from "@/lib/music-context";
+import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
+
+const PRESET_TRACKS = [
+  {
+    name: "Sunset Sitar",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    desc: "Indian classical sitar ambient fusion"
+  },
+  {
+    name: "Himalayan Flute",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+    desc: "Tranquil bansuri flute for meditation"
+  },
+  {
+    name: "Kerala Rain Ambient",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+    desc: "Gentle rain sounds with tanpura drone"
+  },
+  {
+    name: "Vedic Chants Drone",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+    desc: "Mantra base frequencies for concentration"
+  }
+];
 
 export default function Music() {
   const [, navigate] = useLocation();
@@ -46,25 +70,9 @@ export default function Music() {
   return (
     <div className="min-h-screen bg-background relative flex flex-col">
       <ParticleBackground />
-      
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              data-testid="button-back"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="Music Control" />
 
-      <main className="flex-1 flex items-center justify-center pt-20 pb-12 px-4 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-center pt-24 pb-12 px-4 relative z-10">
         <Card className="w-full max-w-md p-8 glassmorphism border-0">
           <div className="text-center mb-8">
             <div className="w-32 h-32 mx-auto mb-4 rounded-full tricolor-gradient-animated flex items-center justify-center">
@@ -81,13 +89,33 @@ export default function Music() {
             </p>
           </div>
 
+          <div className="mb-6">
+            <h2 className="text-xs font-semibold text-muted-foreground mb-3 uppercase tracking-wider">Choose Ambient Preset</h2>
+            <div className="grid grid-cols-2 gap-2">
+              {PRESET_TRACKS.map(t => (
+                <Button
+                  key={t.name}
+                  variant="outline"
+                  className={cn(
+                    "h-auto py-2 px-3 flex flex-col items-start text-left gap-0.5 hover:bg-muted/50 border border-border/40",
+                    currentTrack === t.name && "border-saffron-500 bg-saffron-500/5 ring-1 ring-saffron-500"
+                  )}
+                  onClick={() => loadTrack(t.url, t.name)}
+                >
+                  <span className="font-semibold text-xs text-foreground">{t.name}</span>
+                  <span className="text-[9px] text-muted-foreground leading-tight line-clamp-1">{t.desc}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {!currentTrack ? (
             <div className="text-center">
               <label htmlFor="music-upload" className="cursor-pointer">
                 <Card className="p-8 border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors">
                   <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                   <p className="text-muted-foreground mb-2">
-                    Upload your background music
+                    Or upload background music
                   </p>
                   <p className="text-xs text-muted-foreground/70">
                     Supports MP3 and OGG formats
@@ -185,7 +213,7 @@ export default function Music() {
                   <Button variant="outline" className="w-full" asChild>
                     <span>
                       <Upload className="w-4 h-4 mr-2" />
-                      Change Track
+                      Or Upload Custom Track
                     </span>
                   </Button>
                   <input

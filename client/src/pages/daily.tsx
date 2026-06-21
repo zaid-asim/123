@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { ArrowLeft, Quote, Lightbulb, Newspaper, RefreshCw, Loader2, CalendarDays, Sunrise, Sunset, Star, Moon } from "lucide-react";
+import { ArrowLeft, Quote, Lightbulb, Newspaper, RefreshCw, Loader2, CalendarDays, Sunrise, Sunset, Star, Moon, Brain, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SwadeshLogo } from "@/components/swadesh-logo";
@@ -10,6 +10,8 @@ import { ParticleBackground } from "@/components/particle-background";
 import { indianQuotes } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/page-header";
+import { useAuth } from "@/hooks/useAuth";
 
 type DailyData = {
   fact: string;
@@ -25,8 +27,31 @@ type DailyData = {
 export default function SwadeshDaily() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { isGuest } = useAuth();
   const [quote, setQuote] = useState(indianQuotes[0]);
   const [dailyData, setDailyData] = useState<DailyData | null>(null);
+
+  const saveMemoryMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest("POST", "/api/memories", {
+        content,
+        category: "learning"
+      });
+    },
+    onSuccess: () => {
+      if (isGuest) {
+        toast({ 
+          title: "Saved to temporary Guest Memory!", 
+          description: "This will only persist for your current browser session. Log in to save memories permanently."
+        });
+      } else {
+        toast({ title: "Saved to Swadesh Memory!" });
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to save to memory.", variant: "destructive" });
+    }
+  });
 
   const generateDailyMutation = useMutation({
     mutationFn: async () => {
@@ -45,11 +70,13 @@ export default function SwadeshDaily() {
 
       const res = await apiRequest("POST", "/api/chat", { 
         message: prompt, 
-        personality: "professional" 
+        personality: "professional",
+        settings: { useReasoningPipeline: false }
       });
       const data = await res.json();
-      const content = data.response.replace(/```json/g, "").replace(/```/g, "").trim();
-      return JSON.parse(content) as DailyData;
+      const jsonMatch = data.response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("Invalid response format");
+      return JSON.parse(jsonMatch[0]) as DailyData;
     },
     onSuccess: (data) => {
       setDailyData(data);
@@ -79,22 +106,14 @@ export default function SwadeshDaily() {
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
       
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={refreshContent} disabled={generateDailyMutation.isPending} data-testid="button-refresh">
-              <RefreshCw className={`h-5 w-5 ${generateDailyMutation.isPending ? "animate-spin text-muted-foreground" : ""}`} />
-            </Button>
-            <ThemeToggle />
-          </div>
-        </div>
-      </header>
+      <PageHeader 
+        title="Swadesh Daily" 
+        rightElement={
+          <Button variant="ghost" size="icon" onClick={refreshContent} disabled={generateDailyMutation.isPending} data-testid="button-refresh" className="h-9 w-9">
+            <RefreshCw className={`h-5 w-5 ${generateDailyMutation.isPending ? "animate-spin text-muted-foreground" : ""}`} />
+          </Button>
+        }
+      />
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-4xl relative z-10">
         <div className="text-center mb-8">
@@ -172,8 +191,20 @@ export default function SwadeshDaily() {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-india-green-500 to-india-green-600 flex items-center justify-center flex-shrink-0">
                       <Lightbulb className="w-6 h-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="font-semibold text-lg mb-3">Historical Fact</h2>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <h2 className="font-semibold text-lg">Historical Fact</h2>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => saveMemoryMutation.mutate(`Historical Fact: ${dailyData.fact}`)}
+                          disabled={saveMemoryMutation.isPending}
+                          className="h-8 w-8 text-india-green-500 hover:bg-india-green-500/10"
+                          title="Save to Memory"
+                        >
+                          <Brain className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <p className="text-foreground/90">{dailyData.fact}</p>
                     </div>
                   </div>
@@ -190,9 +221,19 @@ export default function SwadeshDaily() {
                         {dailyData.news.map((headline, index) => (
                           <div
                             key={index}
-                            className="p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors"
+                            className="p-3 rounded-md bg-muted/50 hover:bg-muted transition-colors flex items-center justify-between gap-4"
                           >
                             <p className="text-foreground/90">{headline}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => saveMemoryMutation.mutate(`News Headline: ${headline}`)}
+                              disabled={saveMemoryMutation.isPending}
+                              className="h-8 w-8 text-india-blue-500 hover:bg-india-blue-500/10 shrink-0"
+                              title="Save to Memory"
+                            >
+                              <Brain className="h-4 w-4" />
+                            </Button>
                           </div>
                         ))}
                       </div>

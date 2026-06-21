@@ -51,6 +51,7 @@ Respond ONLY with valid JSON array in this exact format:
 [{"question":"...","options":["A...","B...","C...","D..."],"correct":0,"explanation":"..."}]
 No markdown, no explanation outside JSON, just the array.`,
                 personality: "teacher",
+                settings: { useReasoningPipeline: false }
             });
             const data = await res.json();
             const jsonMatch = data.response.match(/\[[\s\S]*\]/);

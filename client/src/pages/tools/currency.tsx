@@ -41,9 +41,10 @@ export default function CurrencyPage() {
             const res = await apiRequest("POST", "/api/chat", {
                 message: `Convert ${amount} ${from} to ${to}. Provide: 1) The converted amount with current approximate exchange rate (as of early 2026), 2) Brief context about both currencies, 3) Tips for currency exchange from India. Format clearly and mention this is an approximate rate.`,
                 personality: "friendly",
+                settings: { useReasoningPipeline: false }
             });
             const data = await res.json();
-            return data.response as string;
+            return data.response.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim();
         },
         onSuccess: (data) => setResult(data),
         onError: () => toast({ title: "Conversion failed", variant: "destructive" }),

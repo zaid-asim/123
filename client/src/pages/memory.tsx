@@ -18,6 +18,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Memory } from "@shared/schema";
 import { memoryCategories, type MemoryCategory } from "@shared/schema";
+import { PageHeader } from "@/components/page-header";
+import { useAuth } from "@/hooks/useAuth";
 
 const categoryColors: Record<string, string> = {
   general: "bg-gray-500/20 text-gray-600 dark:text-gray-300",
@@ -37,6 +39,7 @@ const categoryLabels: Record<string, string> = {
 
 export default function MemoryPage() {
   const [, navigate] = useLocation();
+  const { isGuest } = useAuth();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [newMemory, setNewMemory] = useState("");
@@ -131,17 +134,7 @@ export default function MemoryPage() {
   return (
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="Memory Manager" />
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-3xl relative z-10">
         <div className="flex items-center justify-between mb-2">
@@ -164,6 +157,15 @@ export default function MemoryPage() {
           </div>
         </div>
         <p className="text-muted-foreground mb-6">Manage what Swadesh AI remembers about you</p>
+
+        {isGuest && (
+          <Card className="mb-6 border-saffron-500/30 bg-saffron-500/5 text-saffron-600 dark:text-saffron-400 p-4 rounded-lg flex items-start gap-3">
+            <Brain className="w-5 h-5 mt-0.5 shrink-0 animate-pulse text-saffron-500" />
+            <div className="text-sm">
+              <span className="font-bold">Guest Session Mode:</span> Memories created or modified here are saved temporarily in your current browser session. Log in to persist your personalized settings permanently.
+            </div>
+          </Card>
+        )}
 
         {/* Search */}
         <div className="relative mb-4">

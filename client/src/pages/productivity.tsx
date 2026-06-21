@@ -14,6 +14,46 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticleBackground } from "@/components/particle-background";
 import type { TodoItem, Note } from "@shared/schema";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
+
+const NOTE_TEMPLATES = [
+  {
+    name: "Sanskrit Grammar Study",
+    title: "Sanskrit Grammar Notes",
+    content: "Topic: Sandhi / Vibhakti / Dhatu\n\nNotes:\n- Rules: \n- Examples: \n- Pronunciation Tips: "
+  },
+  {
+    name: "Daily Reflection Log",
+    title: "Daily Log - " + new Date().toLocaleDateString("en-IN"),
+    content: "Today's Focus:\n-\n\nThings learned:\n-\n\nWhat went well:\n-\n\nThoughts for tomorrow:\n-"
+  },
+  {
+    name: "AI Coding Assistant Plan",
+    title: "Coding Strategy: ",
+    content: "Goal: \n\nImplementation Steps:\n1. Define schema & types\n2. Refactor helper functions\n3. Build UI screens\n4. Write tests & verify"
+  }
+];
+
+const TODO_PRESETS = [
+  {
+    name: "Vedic Sanskrit Daily",
+    items: [
+      { text: "Recite Shlokas (15 mins)", priority: "low" as const },
+      { text: "Learn 5 new Sanskrit nouns", priority: "medium" as const },
+      { text: "Practice Devanagari writing", priority: "low" as const },
+      { text: "Read grammar rule summary", priority: "high" as const }
+    ]
+  },
+  {
+    name: "Software Developer Block",
+    items: [
+      { text: "Fix typescript compiler warnings", priority: "high" as const },
+      { text: "Implement mock test suite", priority: "medium" as const },
+      { text: "Refactor backend API routing", priority: "high" as const },
+      { text: "Write documentation walkthrough", priority: "low" as const }
+    ]
+  }
+];
 
 const TODOS_KEY = "swadesh-todos";
 const NOTES_KEY = "swadesh-notes";
@@ -154,17 +194,7 @@ export default function Productivity() {
   return (
     <div className="min-h-screen bg-background relative">
       <ParticleBackground />
-      <header className="fixed top-0 left-0 right-0 z-50 glassmorphism">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <SwadeshLogo size="sm" animated={false} />
-          </div>
-          <ThemeToggle />
-        </div>
-      </header>
+      <PageHeader title="Productivity Suite" />
 
       <main className="container mx-auto px-4 pt-24 pb-12 max-w-4xl relative z-10">
         <h1 className="text-3xl font-bold mb-8 text-gradient-tricolor">Productivity Suite</h1>
@@ -188,7 +218,7 @@ export default function Productivity() {
           {/* TODOS */}
           <TabsContent value="todos" className="space-y-4">
             <Card className="p-4 glassmorphism border-0">
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-3">
                 <Input
                   value={newTodo}
                   onChange={e => setNewTodo(e.target.value)}
@@ -210,6 +240,31 @@ export default function Productivity() {
                 <Button onClick={addTodo} className="bg-saffron-500 hover:bg-saffron-600" data-testid="button-add-todo">
                   <Plus className="w-4 h-4" />
                 </Button>
+              </div>
+              <div className="flex items-center justify-between border-t border-border/40 pt-3 text-xs">
+                <span className="text-muted-foreground font-medium">Quick Presets:</span>
+                <div className="flex gap-2">
+                  {TODO_PRESETS.map((preset) => (
+                    <Button
+                      key={preset.name}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px]"
+                      onClick={() => {
+                        const newTodos = preset.items.map(item => ({
+                          id: (Date.now() + Math.random()).toString(),
+                          text: item.text,
+                          completed: false,
+                          createdAt: Date.now(),
+                          priority: item.priority
+                        }));
+                        setTodos(prev => [...newTodos, ...prev]);
+                      }}
+                    >
+                      + {preset.name}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </Card>
 
@@ -261,6 +316,26 @@ export default function Productivity() {
           {/* NOTES */}
           <TabsContent value="notes" className="space-y-4">
             <Card className="p-4 glassmorphism border-0 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Choose Template:</span>
+                <Select
+                  onValueChange={v => {
+                    const template = NOTE_TEMPLATES.find(t => t.name === v);
+                    if (template) {
+                      setNewNote({ title: template.title, content: template.content });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-48 h-8 text-xs">
+                    <SelectValue placeholder="Select a template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NOTE_TEMPLATES.map(t => (
+                      <SelectItem key={t.name} value={t.name} className="text-xs">{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Input
                 value={newNote.title}
                 onChange={e => setNewNote({ ...newNote, title: e.target.value })}

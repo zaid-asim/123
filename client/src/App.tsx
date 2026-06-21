@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Router as WouterRouter } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -62,15 +62,18 @@ function LoadingScreen() {
 
 function Router() {
   const { user, isLoading, isAuthenticated, isGuest } = useAuth();
+  const base = import.meta.env.BASE_URL?.replace(/\/$/, "") || "";
 
   if (isLoading) return <LoadingScreen />;
 
   if (!isAuthenticated) {
     return (
-      <Switch>
-        <Route path="/" component={Landing} />
-        <Route component={Landing} />
-      </Switch>
+      <WouterRouter base={base}>
+        <Switch>
+          <Route path="/" component={Landing} />
+          <Route component={Landing} />
+        </Switch>
+      </WouterRouter>
     );
   }
 
@@ -78,15 +81,17 @@ function Router() {
   const typedUser = user as (User & { isGuest?: boolean }) | undefined;
   if (!isGuest && typedUser && !typedUser.setupCompleted) {
     return (
-      <Switch>
-        <Route path="/" component={Setup} />
-        <Route component={Setup} />
-      </Switch>
+      <WouterRouter base={base}>
+        <Switch>
+          <Route path="/" component={Setup} />
+          <Route component={Setup} />
+        </Switch>
+      </WouterRouter>
     );
   }
 
   return (
-    <>
+    <WouterRouter base={base}>
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/chat" component={Chat} />
@@ -128,7 +133,7 @@ function Router() {
       </Switch>
       {/* Show guest banner on every page if in guest mode */}
       {isGuest && <GuestBanner />}
-    </>
+    </WouterRouter>
   );
 }
 

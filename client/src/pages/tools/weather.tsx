@@ -34,9 +34,10 @@ export default function WeatherTool() {
             const res = await apiRequest("POST", "/api/chat", {
                 message: `Give me detailed weather information and climate insight for ${cityName}, India. Include: current season (it's February 2026), typical temperature range, what to wear, best activities, and any weather alerts. Format with clear sections using emoji icons. Be informative and helpful.`,
                 personality: "friendly",
+                settings: { useReasoningPipeline: false }
             });
             const data = await res.json();
-            return data.response as string;
+            return data.response.replace(/<think>[\s\S]*?(?:<\/think>|$)/ig, "").trim();
         },
         onSuccess: (data) => setResult(data),
         onError: () => toast({ title: "Failed to fetch weather info", variant: "destructive" }),

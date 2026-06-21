@@ -12,7 +12,7 @@ type MusicContextType = {
   toggle: () => void;
   setVolume: (vol: number) => void;
   setLoop: (loop: boolean) => void;
-  loadTrack: (file: File) => void;
+  loadTrack: (track: File | string, trackName?: string) => void;
   seek: (time: number) => void;
   dimForSpeech: () => void;
   restoreFromSpeech: () => void;
@@ -69,7 +69,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const play = useCallback(() => {
     if (audioRef.current && currentTrack) {
-      audioRef.current.play();
+      audioRef.current.play().catch(err => {
+        console.error("Audio playback failed:", err);
+      });
       setIsPlaying(true);
     }
   }, [currentTrack]);
@@ -97,12 +99,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     setLoopState(l);
   }, []);
 
-  const loadTrack = useCallback((file: File) => {
+  const loadTrack = useCallback((track: File | string, trackName?: string) => {
     if (audioRef.current) {
-      const url = URL.createObjectURL(file);
-      audioRef.current.src = url;
-      setCurrentTrack(file.name);
+      if (typeof track === "string") {
+        audioRef.current.src = track;
+        setCurrentTrack(trackName || track.split("/").pop() || "Ambient Preset");
+      } else {
+        const url = URL.createObjectURL(track);
+        audioRef.current.src = url;
+        setCurrentTrack(track.name);
+      }
       audioRef.current.load();
+      setIsPlaying(false);
     }
   }, []);
 
