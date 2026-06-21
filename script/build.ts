@@ -35,16 +35,22 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
-  console.log("building client...");
-  await viteBuild();
+  const skipClient = process.env.SKIP_CLIENT_BUILD === "true";
 
-  // Generate _redirects for Cloudflare Pages SPA routing
-  const base = process.env.VITE_BASE_PATH || "/";
-  if (base !== "/") {
-    const cleanBase = base.replace(/\/$/, "");
-    const redirectsContent = `${cleanBase}/* ${cleanBase}/index.html 200\n`;
-    await writeFile("dist/public/_redirects", redirectsContent);
-    console.log(`Generated _redirects for base ${cleanBase}`);
+  if (!skipClient) {
+    console.log("building client...");
+    await viteBuild();
+
+    // Generate _redirects for Cloudflare Pages SPA routing
+    const base = process.env.VITE_BASE_PATH || "/";
+    if (base !== "/") {
+      const cleanBase = base.replace(/\/$/, "");
+      const redirectsContent = `${cleanBase}/* ${cleanBase}/index.html 200\n`;
+      await writeFile("dist/public/_redirects", redirectsContent);
+      console.log(`Generated _redirects for base ${cleanBase}`);
+    }
+  } else {
+    console.log("skipping client build (SKIP_CLIENT_BUILD=true)...");
   }
 
   console.log("building server...");
