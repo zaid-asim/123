@@ -1,20 +1,148 @@
-import { GoogleGenAI } from "@google/genai";
+import { MODELS, getClient } from "./reasoning/models";
+import { getActiveAdapter, GroqConfig, OpenRouterConfig, OpenAIConfig, GrokConfig, DeepSeekConfig, AnthropicConfig } from "./adapters/model-adapter";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
-function getClient(apiKey?: string) {
-  return apiKey ? new GoogleGenAI({ apiKey }) : ai;
+export async function testGeminiApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const tempClient = getClient(apiKey);
+    await tempClient.models.generateContent({
+      model: MODELS.PRIMARY,
+      contents: "Hello",
+      config: {
+        maxOutputTokens: 5,
+      },
+    });
+    return { valid: true };
+  } catch (error: any) {
+    console.error("Gemini API key validation failed:", error);
+    return {
+      valid: false,
+      error: error.message || String(error),
+    };
+  }
 }
 
-export type GroqConfig = {
-  useGroq: boolean;
-  groqApiKey?: string;
-  groqModel?: string;
-};
+// ─── Groq Key Validator ───
+export async function testGroqApiKey(
+  apiKey: string,
+  model: string = "llama-4-scout-17b-16e-instruct"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://api.groq.com/openai/v1/chat/completions";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `Groq API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
+// ─── OpenRouter Key Validator ───
+export async function testOpenRouterApiKey(
+  apiKey: string,
+  model: string = "google/gemini-2.5-flash"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://openrouter.ai/api/v1/chat/completions";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://swadesh.ai",
+        "X-Title": "Swadesh AI"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `OpenRouter API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
+// ─── OpenAI Key Validator ───
+export async function testOpenAiApiKey(
+  apiKey: string,
+  model: string = "gpt-4o-mini"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://api.openai.com/v1/chat/completions";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `OpenAI API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
+// ─── Grok (xAI) Key Validator ───
+export async function testGrokApiKey(
+  apiKey: string,
+  model: string = "grok-2-1212"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://api.x.ai/v1/chat/completions";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `Grok API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
 
 async function generateWithGroq(contents: string, systemInstruction: string, config: GroqConfig, temperature: number) {
   const url = "https://api.groq.com/openai/v1/chat/completions";
-  const model = config.groqModel || "llama3-8b-8192";
+  const model = config.groqModel || MODELS.GROQ_DEFAULT;
   const apiKey = config.groqApiKey;
 
   if (!apiKey) throw new Error("Groq API key is missing");
@@ -86,6 +214,66 @@ const REASONING_DEPTH_INSTRUCTIONS: Record<string, string> = {
   deep: `You MUST provide extensive, deep, multi-step analysis in your <think> block before answering. Explore multiple angles and edge cases.`
 };
 
+
+// ─── DeepSeek Key Validator ───
+export async function testDeepSeekApiKey(
+  apiKey: string,
+  model: string = "deepseek-chat"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://api.deepseek.com/chat/completions";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `DeepSeek API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
+// ─── Anthropic Key Validator ───
+export async function testAnthropicApiKey(
+  apiKey: string,
+  model: string = "claude-3-5-sonnet-latest"
+): Promise<{ valid: boolean; error?: string }> {
+  try {
+    const url = "https://api.anthropic.com/v1/messages";
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: "Hi" }],
+        max_tokens: 5
+      })
+    });
+    if (!response.ok) {
+      const err = await response.text();
+      return { valid: false, error: `Anthropic API ${response.status}: ${err}` };
+    }
+    return { valid: true };
+  } catch (error: any) {
+    return { valid: false, error: error.message || String(error) };
+  }
+}
+
 export async function chat(
   message: string,
   personality: string = "friendly",
@@ -93,7 +281,8 @@ export async function chat(
   mode: "chat" | "voice" = "chat",
   settings?: any,
   apiKey?: string,
-  groqConfig?: GroqConfig
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
 ): Promise<string> {
   const personalityPrompts: Record<string, string> = {
     formal: "Respond in a formal, professional manner.",
@@ -127,32 +316,12 @@ export async function chat(
   try {
     let responseText = "";
 
-    if (groqConfig?.useGroq) {
-      responseText = await generateWithGroq(fullMessage, systemPrompt, groqConfig, temperature);
-    } else {
-      const response = await getClient(apiKey).models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: fullMessage,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature,
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-          ] as any,
-        },
-      });
-
-      if (response.candidates && response.candidates.length > 0) {
-        const candidate = response.candidates[0];
-        if (candidate.finishReason === "SAFETY") {
-          return "I apologize, but my safety filters prevented me from answering that. Please try rephrasing.";
-        }
-      }
-      responseText = response.text || "I apologize, but I couldn't generate a response. Please try again.";
-    }
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(fullMessage, {
+      systemInstruction: systemPrompt,
+      temperature,
+    });
+    responseText = response.text || "I apologize, but I couldn't generate a response. Please try again.";
 
     return responseText;
   } catch (error) {
@@ -161,7 +330,14 @@ export async function chat(
   }
 }
 
-export async function analyzeDocument(content: string, action: string, targetLanguage?: string, apiKey?: string): Promise<string> {
+export async function analyzeDocument(
+  content: string, 
+  action: string, 
+  targetLanguage?: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const prompts: Record<string, string> = {
     summarize: `Summarize the following document concisely, highlighting key points:\n\n${content}`,
     explain: `Provide a detailed explanation of the following document, breaking down complex concepts:\n\n${content}`,
@@ -171,26 +347,27 @@ export async function analyzeDocument(content: string, action: string, targetLan
   };
 
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompts[action] || prompts.summarize,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a document analysis expert. Provide clear, accurate, and helpful analysis.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(prompts[action] || prompts.summarize, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a document analysis expert. Provide clear, accurate, and helpful analysis.`,
+      apiKey
     });
-
-    try {
-      return response.text || "Unable to analyze the document.";
-    } catch (e) {
-      return "Unable to analyze the document due to an empty response from the AI.";
-    }
+    return response.text || "Unable to analyze the document.";
   } catch (error) {
     console.error("Document analysis error:", error);
     throw new Error("Failed to analyze document");
   }
 }
 
-export async function analyzeCode(code: string, action: string, language: string, prompt?: string, apiKey?: string): Promise<string> {
+export async function analyzeCode(
+  code: string, 
+  action: string, 
+  language: string, 
+  prompt?: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const prompts: Record<string, string> = {
     generate: `Generate ${language} code for the following requirement:\n\n${prompt}`,
     debug: `Debug the following ${language} code and explain the issues found:\n\n${code}`,
@@ -199,26 +376,27 @@ export async function analyzeCode(code: string, action: string, language: string
   };
 
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompts[action] || prompts.explain,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert programmer. Provide clean, well-commented, production-ready code when generating. Be thorough when debugging or explaining.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(prompts[action] || prompts.explain, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert programmer. Provide clean, well-commented, production-ready code when generating. Be thorough when debugging or explaining.`,
+      apiKey
     });
-
-    try {
-      return response.text || "Unable to process the code.";
-    } catch (e) {
-      return "Unable to process the code due to an empty response from the AI.";
-    }
+    return response.text || "Unable to process the code.";
   } catch (error) {
     console.error("Code analysis error:", error);
     throw new Error("Failed to analyze code");
   }
 }
 
-export async function studyAssistant(topic: string, action: string, grade?: string, subject?: string, apiKey?: string): Promise<string> {
+export async function studyAssistant(
+  topic: string, 
+  action: string, 
+  grade?: string, 
+  subject?: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const context = grade && subject ? `For Class ${grade} ${subject}: ` : "";
 
   const prompts: Record<string, string> = {
@@ -230,26 +408,27 @@ export async function studyAssistant(topic: string, action: string, grade?: stri
   };
 
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompts[action] || prompts["ncert-solution"],
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian education tutor familiar with NCERT curriculum. Provide accurate, student-friendly explanations.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(prompts[action] || prompts["ncert-solution"], {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian education tutor familiar with NCERT curriculum. Provide accurate, student-friendly explanations.`,
+      apiKey
     });
-
-    try {
-      return response.text || "Unable to provide study assistance.";
-    } catch (e) {
-      return "Unable to provide study assistance due to an empty response from the AI.";
-    }
+    return response.text || "Unable to provide study assistance.";
   } catch (error) {
     console.error("Study assistant error:", error);
     throw new Error("Failed to provide study assistance");
   }
 }
 
-export async function translateText(text: string, sourceLanguage: string, targetLanguage: string, transliterate: boolean, apiKey?: string): Promise<string> {
+export async function translateText(
+  text: string, 
+  sourceLanguage: string, 
+  targetLanguage: string, 
+  transliterate: boolean, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const languageNames: Record<string, string> = {
     en: "English",
     hi: "Hindi",
@@ -274,26 +453,19 @@ export async function translateText(text: string, sourceLanguage: string, target
     : `Translate the following ${languageNames[sourceLanguage]} text to ${languageNames[targetLanguage]}:\n\n${text}`;
 
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a professional translator specializing in Indian languages. Provide accurate, natural-sounding translations.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(prompt, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a professional translator specializing in Indian languages. Provide accurate, natural-sounding translations.`,
+      apiKey
     });
-
-    try {
-      return response.text || "Unable to translate.";
-    } catch (e) {
-      return "Unable to translate due to an empty response from the AI.";
-    }
+    return response.text || "Unable to translate.";
   } catch (error) {
     console.error("Translation error:", error);
     throw new Error("Failed to translate");
   }
 }
 
-export async function searchAndSummarize(query: string, type: string, apiKey?: string): Promise<{ summary: string; sources: Array<{ title: string; url: string; snippet: string }> }> {
+export async function searchAndSummarize(query: string, type: string, apiKey?: string, geminiModel?: string): Promise<{ summary: string; sources: Array<{ title: string; url: string; snippet: string }> }> {
   const typeContext: Record<string, string> = {
     general: "Provide a comprehensive answer",
     news: "Focus on recent news and current events",
@@ -302,7 +474,7 @@ export async function searchAndSummarize(query: string, type: string, apiKey?: s
 
   try {
     const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
+      model: geminiModel || MODELS.PRIMARY,
       contents: `${typeContext[type] || typeContext.general} for the following query: ${query}`,
       config: {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a search and research assistant. Provide accurate, well-organized information.`,
@@ -343,7 +515,7 @@ export async function searchAndSummarize(query: string, type: string, apiKey?: s
   }
 }
 
-export async function analyzeImage(imageBase64: string, action: string, apiKey?: string): Promise<string> {
+export async function analyzeImage(imageBase64: string, action: string, apiKey?: string, geminiModel?: string): Promise<string> {
   const prompts: Record<string, string> = {
     ocr: "Extract all text from this image. Provide the text exactly as it appears.",
     "detect-objects": "Identify and list all objects visible in this image with their approximate locations.",
@@ -353,7 +525,7 @@ export async function analyzeImage(imageBase64: string, action: string, apiKey?:
 
   try {
     const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
+      model: geminiModel || MODELS.PRIMARY,
       contents: [
         {
           inlineData: {
@@ -376,7 +548,14 @@ export async function analyzeImage(imageBase64: string, action: string, apiKey?:
   }
 }
 
-export async function generateCreativeContent(type: string, prompt: string, language: string = "en", apiKey?: string): Promise<string> {
+export async function generateCreativeContent(
+  type: string, 
+  prompt: string, 
+  language: string = "en", 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const typePrompts: Record<string, string> = {
     script: `Write a detailed video/drama script for: ${prompt}. Include scene descriptions, dialogues, and directions.`,
     story: `Write a creative short story based on: ${prompt}. Include interesting characters, plot twists, and a satisfying ending.`,
@@ -385,29 +564,22 @@ export async function generateCreativeContent(type: string, prompt: string, lang
   };
 
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: typePrompts[type] || typePrompts.story,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a creative writer and content creator. Generate engaging, original content.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(typePrompts[type] || typePrompts.story, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a creative writer and content creator. Generate engaging, original content.`,
+      apiKey
     });
-
-    try {
-      return response.text || "Unable to generate creative content.";
-    } catch (e) {
-      return "Unable to generate creative content due to an empty response from the AI.";
-    }
+    return response.text || "Unable to generate creative content.";
   } catch (error) {
     console.error("Creative content error:", error);
     throw new Error("Failed to generate creative content");
   }
 }
 
-export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg", apiKey?: string): Promise<string> {
+export async function extractTextOCR(imageBase64: string, mimeType: string = "image/jpeg", apiKey?: string, geminiModel?: string): Promise<string> {
   try {
     const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
+      model: geminiModel || MODELS.PRIMARY,
       contents: [
         {
           role: "user",
@@ -437,7 +609,13 @@ export async function extractTextOCR(imageBase64: string, mimeType: string = "im
   }
 }
 
-export async function generateImagePrompt(prompt: string, style: string, apiKey?: string): Promise<string> {
+export async function generateImagePrompt(
+  prompt: string, 
+  style: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   // Since direct image generation via Gemini API may not be available in all regions,
   // we generate a detailed image description + SVG/ASCII art as a creative fallback
   try {
@@ -449,18 +627,25 @@ export async function generateImagePrompt(prompt: string, style: string, apiKey?
       "3d": "3D render, CGI, modern, high-tech look",
       sketch: "pencil sketch, hand-drawn, detailed line art",
     };
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Generate an extremely detailed, vivid description of this image (as if describing it to an artist): "${prompt}" in ${styleGuides[style] || styleGuides.realistic} style. Make it 3-4 sentences rich in visual detail — colors, composition, lighting, atmosphere. Then on a new line write "PROMPT:" followed by a concise Stable Diffusion / DALL-E prompt for this image.`,
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Generate an extremely detailed, vivid description of this image (as if describing it to an artist): "${prompt}" in ${styleGuides[style] || styleGuides.realistic} style. Make it 3-4 sentences rich in visual detail — colors, composition, lighting, atmosphere. Then on a new line write "PROMPT:" followed by a concise Stable Diffusion / DALL-E prompt for this image.`,
+      { apiKey }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Image generation error:", error);
     throw error;
   }
 }
 
-export async function checkGrammar(text: string, mode: string, apiKey?: string): Promise<string> {
+export async function checkGrammar(
+  text: string, 
+  mode: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const modePrompts: Record<string, string> = {
     check: `Check the following text for grammar, spelling, punctuation, and style errors. List each error with the correction and explanation:\n\n${text}`,
     improve: `Rewrite the following text to be more professional, clear, and well-written while preserving the original meaning. Show the improved version:\n\n${text}`,
@@ -469,61 +654,81 @@ export async function checkGrammar(text: string, mode: string, apiKey?: string):
     hindi: `Check grammar and improve the following Hindi text. Provide corrections:\n\n${text}`,
   };
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: modePrompts[mode] || modePrompts.check,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert language editor and writing assistant.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(modePrompts[mode] || modePrompts.check, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert language editor and writing assistant.`,
+      apiKey
     });
-    try { return response.text || ""; } catch (e) { return ""; }
+    return response.text || "";
   } catch (error) {
     console.error("Grammar check error:", error);
     throw error;
   }
 }
 
-export async function generateRecipe(query: string, dietary: string, cuisine: string, apiKey?: string): Promise<string> {
+export async function generateRecipe(
+  query: string, 
+  dietary: string, 
+  cuisine: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Generate a detailed recipe for "${query}". Dietary preference: ${dietary}. Cuisine: ${cuisine}.
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Generate a detailed recipe for "${query}". Dietary preference: ${dietary}. Cuisine: ${cuisine}.
 Include: Recipe name, Description, Prep time, Cook time, Servings, Ingredients (with quantities), Step-by-step instructions, Pro tips, Nutritional info (approximate). 
 Format clearly with sections. Focus on Indian cooking techniques and authentic flavors where applicable.`,
-      config: {
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian chef and nutritionist. You know traditional Indian recipes as well as fusion cuisine.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Recipe error:", error);
     throw error;
   }
 }
 
-export async function planTravel(destination: string, duration: string, budget: string, interests: string, apiKey?: string): Promise<string> {
+export async function planTravel(
+  destination: string, 
+  duration: string, 
+  budget: string, 
+  interests: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Create a detailed travel itinerary for ${destination}.
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Create a detailed travel itinerary for ${destination}.
 Duration: ${duration} | Budget: ${budget} | Interests: ${interests}
 Include: Day-by-day itinerary, must-see attractions, local food recommendations, accommodation suggestions, transportation tips, best time to visit, estimated costs, cultural tips and etiquette, packing suggestions, and hidden gems only locals know. Format beautifully with clear day headings.`,
-      config: {
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian travel guide with deep knowledge of every state, city, heritage site, and tourist attraction in India and worldwide.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Travel planner error:", error);
     throw error;
   }
 }
 
-export async function buildResume(data: Record<string, string>, apiKey?: string): Promise<string> {
+export async function buildResume(
+  data: Record<string, string>, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Create a professional, ATS-optimized resume based on this information:
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Create a professional, ATS-optimized resume based on this information:
 Name: ${data.name}
 Email: ${data.email}
 Phone: ${data.phone}
@@ -533,18 +738,26 @@ Skills: ${data.skills}
 Education: ${data.education}
 Achievements: ${data.achievements || ""}
 Generate a complete, well-formatted resume with professional summary, experience bullets with impact metrics, skills section, education, and a closing statement. Use action verbs. Make it stand out for Indian job market.`,
-      config: {
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert HR consultant and resume writer with 20 years of experience in the Indian and global job market.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Resume builder error:", error);
     throw error;
   }
 }
 
-export async function getHealthAdvice(symptom: string, age: string, type: string, apiKey?: string): Promise<string> {
+export async function getHealthAdvice(
+  symptom: string, 
+  age: string, 
+  type: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   const typePrompts: Record<string, string> = {
     symptoms: `I have these symptoms: ${symptom}. Age: ${age}. Provide: possible causes, home remedies, when to see a doctor, and general advice. Always recommend consulting a doctor for serious symptoms.`,
     yoga: `Recommend yoga poses and breathing exercises for: ${symptom}. Include: pose name, how to do it, duration, benefits. Age: ${age}.`,
@@ -552,78 +765,100 @@ export async function getHealthAdvice(symptom: string, age: string, type: string
     diet: `Create a healthy Indian diet plan for: ${symptom || "general wellness"}. Age: ${age}. Include breakfast, lunch, dinner, snacks with Indian foods.`,
   };
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: typePrompts[type] || typePrompts.symptoms,
-      config: {
-        systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a health and wellness advisor with knowledge of modern medicine, Ayurveda, and yoga. Always include a disclaimer that this is general information and not medical advice. Recommend consulting a qualified doctor for diagnosis and treatment.`,
-      },
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(typePrompts[type] || typePrompts.symptoms, {
+      systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are a health and wellness advisor with knowledge of modern medicine, Ayurveda, and yoga. Always include a disclaimer that this is general information and not medical advice. Recommend consulting a qualified doctor for diagnosis and treatment.`,
+      apiKey
     });
-    try { return response.text || ""; } catch (e) { return ""; }
+    return response.text || "";
   } catch (error) {
     console.error("Health advice error:", error);
     throw error;
   }
 }
 
-export async function exploreCulture(topic: string, apiKey?: string): Promise<string> {
+export async function exploreCulture(
+  topic: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Provide a detailed, immersive exploration of this aspect of Indian culture, history, or heritage: "${topic}". Include historical context, cultural significance, and interesting facts.`,
-      config: {
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Provide a detailed, immersive exploration of this aspect of Indian culture, history, or heritage: "${topic}". Include historical context, cultural significance, and interesting facts.`,
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert historian and cultural guide specializing in India's rich heritage.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Culture error:", error);
     throw error;
   }
 }
 
-export async function getAstrologyInsights(details: string, apiKey?: string): Promise<string> {
+export async function getAstrologyInsights(
+  details: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Provide a basic Vedic astrology/Panchang insight based on these details: "${details}". Keep it respectful, educational, and include a disclaimer that this is for entertainment and traditional knowledge only.`,
-      config: {
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Provide a basic Vedic astrology/Panchang insight based on these details: "${details}". Keep it respectful, educational, and include a disclaimer that this is for entertainment and traditional knowledge only.`,
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert in Vedic Astrology (Jyotish) and Panchang calculations.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Astrology error:", error);
     throw error;
   }
 }
 
-export async function getAyurvedaAdvice(symptoms: string, apiKey?: string): Promise<string> {
+export async function getAyurvedaAdvice(
+  symptoms: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Provide holistic Ayurveda, Yoga, and natural remedy advice for: "${symptoms}". Include Dosha balancing tips and specific yoga asanas. Add a strict medical disclaimer.`,
-      config: {
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Provide holistic Ayurveda, Yoga, and natural remedy advice for: "${symptoms}". Include Dosha balancing tips and specific yoga asanas. Add a strict medical disclaimer.`,
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Ayurvedic practitioner and Yoga guru. Provide structured, holistic wellness advice.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Ayurveda error:", error);
     throw error;
   }
 }
 
-export async function getFinanceAdvice(query: string, apiKey?: string): Promise<string> {
+export async function getFinanceAdvice(
+  query: string, 
+  apiKey?: string,
+  groqConfig?: GroqConfig,
+  openRouterConfig?: OpenRouterConfig, openAiConfig?: OpenAIConfig, grokConfig?: GrokConfig, geminiModel?: string, deepseekConfig?: DeepSeekConfig, anthropicConfig?: AnthropicConfig
+): Promise<string> {
   try {
-    const response = await getClient(apiKey).models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Provide detailed financial, tax, or business guidance for the Indian market regarding: "${query}". Include concepts like Mutual Funds, GST, EPF/PPF, or startup frameworks if relevant. Add a disclaimer that you are not a registered financial advisor.`,
-      config: {
+    const adapter = getActiveAdapter(apiKey, groqConfig, openRouterConfig, openAiConfig, grokConfig, geminiModel, deepseekConfig, anthropicConfig);
+    const response = await adapter.generate(
+      `Provide detailed financial, tax, or business guidance for the Indian market regarding: "${query}". Include concepts like Mutual Funds, GST, EPF/PPF, or startup frameworks if relevant. Add a disclaimer that you are not a registered financial advisor.`,
+      {
         systemInstruction: `${SWADESH_SYSTEM_PROMPT}\n\nYou are an expert Indian Chartered Accountant (CA) and financial advisor.`,
-      },
-    });
-    try { return response.text || ""; } catch (e) { return ""; }
+        apiKey
+      }
+    );
+    return response.text || "";
   } catch (error) {
     console.error("Finance error:", error);
     throw error;

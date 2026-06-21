@@ -1,3 +1,6 @@
+// Disable TLS/SSL certificate verification for outbound HTTPS requests to bypass local firewall/interception proxies
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 import express, { type Request, type Response, type NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";

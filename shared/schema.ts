@@ -73,6 +73,16 @@ export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string(),
   timestamp: z.number(),
+  confidence: z.any().optional(),
+  sources: z.any().optional(),
+  claims: z.any().optional(),
+  criticNotes: z.any().optional(),
+  timing: z.any().optional(),
+  metacognition: z.any().optional(),
+  isError: z.boolean().optional(),
+  errorDetails: z.string().optional(),
+  status: z.string().optional(),
+  isRevised: z.boolean().optional(),
 });
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
@@ -109,9 +119,25 @@ export const settingsSchema = z.object({
   mustReadMemory: z.string().default(""),
   useCustomApiKey: z.boolean().default(false),
   customApiKey: z.string().default(""),
+  geminiModel: z.string().default("gemini-3.5-flash"),
   useGroq: z.boolean().default(false),
   groqApiKey: z.string().default(""),
-  groqModel: z.string().default("llama3-8b-8192"),
+  groqModel: z.string().default("llama-4-scout-17b-16e-instruct"),
+  useOpenRouter: z.boolean().default(false),
+  openRouterApiKey: z.string().default(""),
+  openRouterModel: z.string().default("google/gemini-3.5-flash"),
+  useOpenAI: z.boolean().default(false),
+  openAiApiKey: z.string().default(""),
+  openAiModel: z.string().default("gpt-5.5"),
+  useGrok: z.boolean().default(false),
+  grokApiKey: z.string().default(""),
+  grokModel: z.string().default("grok-4.3"),
+  useDeepSeek: z.boolean().default(false),
+  deepseekApiKey: z.string().default(""),
+  deepseekModel: z.string().default("deepseek-chat"),
+  useAnthropic: z.boolean().default(false),
+  anthropicApiKey: z.string().default(""),
+  anthropicModel: z.string().default("claude-3-5-sonnet-latest"),
   fontSize: z.enum(["sm", "base", "lg", "xl"]).default("base"),
   glassBlur: z.enum(["low", "medium", "high", "ultra"]).default("medium"),
   animationSpeed: z.enum(["slow", "normal", "fast", "off"]).default("normal"),
@@ -123,6 +149,11 @@ export const settingsSchema = z.object({
   enterToSend: z.boolean().default(true),
   autoScroll: z.boolean().default(true),
   showTimestamps: z.boolean().default(true),
+  useReasoningPipeline: z.boolean().default(true),
+  showConfidence: z.boolean().default(true),
+  showSources: z.boolean().default(true),
+  showReasoningTrace: z.boolean().default(false),
+  criticStrictness: z.enum(["lenient", "standard", "strict"]).default("standard"),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
@@ -276,3 +307,162 @@ export type LanguageConvert = z.infer<typeof languageConvertSchema>;
 export type SearchRequest = z.infer<typeof searchRequestSchema>;
 export type ImageAnalysis = z.infer<typeof imageAnalysisSchema>;
 export type CreativeRequest = z.infer<typeof creativeRequestSchema>;
+
+export interface ReasonedAnswer {
+  response: string;
+  confidence: {
+    score: number;
+    level: "Verified" | "Likely" | "Uncertain" | "Low Confidence";
+    factors: {
+      evidenceScore: number;
+      verificationScore: number;
+      criticScore: number;
+      ensembleScore: number;
+      metacognitionScore: number;
+    };
+  };
+  sources: Array<{
+    title: string;
+    url: string;
+    snippet: string;
+  }>;
+  claims: Array<{
+    claim: string;
+    verificationQuestion: string;
+    independentAnswer: string;
+    consistent: boolean;
+    confidence: number;
+  }>;
+  criticNotes: {
+    issues: Array<{
+      type: 'unsupported' | 'contradiction' | 'logical_gap' | 'overconfidence' | 'stale' | 'bias' | 'incomplete';
+      severity: 'critical' | 'warning' | 'minor';
+      description: string;
+      suggestion: string;
+    }>;
+    assessment: 'pass' | 'revise' | 'fail';
+  };
+  timing: {
+    routing: number;
+    retrieval: number;
+    candidates: number;
+    refine: number;
+    verification: number;
+    critic: number;
+    ensemble: number;
+    metacognition: number;
+    total: number;
+  };
+  metacognition: {
+    knownUnknowns: string[];
+    potentialBiases: string[];
+    confidenceCalibration: string;
+    suggestedFollowUp: string[];
+  };
+}
+
+// Knowledge Fabric & Semantic Retrieval Tables
+export const sources = pgTable("sources", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  workspaceId: varchar("workspace_id").notNull().default("default"),
+  name: varchar("name").notNull(),
+  type: varchar("type", { length: 20 }).notNull(), // 'txt' | 'md' | 'csv' | 'json' | 'pdf' | 'docx'
+  owner: varchar("owner").notNull().default("System"),
+  scope: varchar("scope", { length: 20 }).notNull().default("private"), // 'private' | 'shared' | 'public'
+  trustScore: integer("trust_score").notNull().default(100),
+  freshness: timestamp("freshness").defaultNow().notNull(),
+  versionHash: varchar("version_hash").notNull(),
+  tokenCount: integer("token_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const chunks = pgTable("chunks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceId: varchar("source_id").notNull().references(() => sources.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  embedding: jsonb("embedding").notNull(), // Array of floats (gemini-embedding-2)
+  page: integer("page"),
+  section: varchar("section"),
+  tokenCount: integer("token_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const answerRuns = pgTable("answer_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  workspaceId: varchar("workspace_id").notNull().default("default"),
+  question: text("question").notNull(),
+  mode: varchar("mode").notNull(),
+  taskType: varchar("task_type").notNull(),
+  model: varchar("model").notNull(),
+  executionMode: varchar("execution_mode").notNull(), // 'gemini' | 'groq' | 'fallback'
+  fallbackUsed: boolean("fallback_used").notNull().default(false),
+  confidenceScore: integer("confidence_score").notNull().default(0),
+  confidenceLabel: varchar("confidence_label").notNull().default("Low Confidence"),
+  timing: jsonb("timing").notNull(), // timing object
+  criticFindings: jsonb("critic_findings").notNull().default('[]'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const claims = pgTable("claims", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  answerRunId: varchar("answer_run_id").notNull().references(() => answerRuns.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  supportLevel: varchar("support_level").notNull().default("strong"), // 'strong' | 'weak' | 'contradicted'
+  sourceIds: jsonb("source_ids").notNull().default('[]'), // array of strings
+  criticFlags: jsonb("critic_flags").notNull().default('[]'), // array of strings
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSourceSchema = createInsertSchema(sources).pick({
+  name: true,
+  type: true,
+  owner: true,
+  scope: true,
+  trustScore: true,
+  versionHash: true,
+  tokenCount: true,
+});
+
+export const insertChunkSchema = createInsertSchema(chunks).pick({
+  sourceId: true,
+  text: true,
+  embedding: true,
+  page: true,
+  section: true,
+  tokenCount: true,
+});
+
+export const insertAnswerRunSchema = createInsertSchema(answerRuns).pick({
+  question: true,
+  mode: true,
+  taskType: true,
+  model: true,
+  executionMode: true,
+  fallbackUsed: true,
+  confidenceScore: true,
+  confidenceLabel: true,
+  timing: true,
+  criticFindings: true,
+});
+
+export const insertClaimSchema = createInsertSchema(claims).pick({
+  answerRunId: true,
+  text: true,
+  supportLevel: true,
+  sourceIds: true,
+  criticFlags: true,
+});
+
+export type Source = typeof sources.$inferSelect;
+export type InsertSource = typeof sources.$inferInsert;
+export type Chunk = typeof chunks.$inferSelect;
+export type InsertChunk = typeof chunks.$inferInsert;
+export type AnswerRun = typeof answerRuns.$inferSelect;
+export type InsertAnswerRun = typeof answerRuns.$inferInsert;
+export type Claim = typeof claims.$inferSelect;
+export type InsertClaim = typeof claims.$inferInsert;
+
+

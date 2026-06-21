@@ -1,6 +1,6 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
-import { rm, readFile } from "fs/promises";
+import { rm, readFile, writeFile } from "fs/promises";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -37,6 +37,15 @@ async function buildAll() {
 
   console.log("building client...");
   await viteBuild();
+
+  // Generate _redirects for Cloudflare Pages SPA routing
+  const base = process.env.VITE_BASE_PATH || "/";
+  if (base !== "/") {
+    const cleanBase = base.replace(/\/$/, "");
+    const redirectsContent = `${cleanBase}/* ${cleanBase}/index.html 200\n`;
+    await writeFile("dist/public/_redirects", redirectsContent);
+    console.log(`Generated _redirects for base ${cleanBase}`);
+  }
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
